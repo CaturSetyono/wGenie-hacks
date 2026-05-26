@@ -4,7 +4,7 @@ import plasmaVaultsJson from '../../../../plasma-vaults.json';
 
 const APP_IDS = [
   'fusion',
-  'yo',
+  'wgenie',
   'wgenie-dao',
   'clearstar',
   'tesseract',
@@ -95,8 +95,8 @@ export const getChainName = (chainId: number): string => {
 // Tag constants
 export const VAULT_TAG = {
   wGenie_FUSION: 'wgenie-fusion',
-  YO_TREASURY: 'yo-treasury',
-  YO_VAULT: 'yo-vault',
+  YO_TREASURY: 'wgenie-cfo',
+  YO_VAULT: 'wgenie-vault',
 } as const;
 
 export type VaultTag = (typeof VAULT_TAG)[keyof typeof VAULT_TAG];
