@@ -1,26 +1,40 @@
 'use client';
 
 import { useState } from 'react';
-import { DepositForm } from './deposit-form';
-import { WithdrawForm } from './withdraw-form';
+import { useVaultState } from '@walletgenie-protocol/react';
 import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { TokenIcon } from '@/components/token-icon';
+import { YoDepositForm } from './deposit-form';
+import { YoWithdrawForm } from './withdraw-form';
 import type { ChainId } from '@/app/chains.config';
 import type { Address } from 'viem';
 
 interface Props {
   chainId: ChainId;
   vaultAddress: Address;
-  accessManagerUrl?: string;
 }
 
 type Tab = 'deposit' | 'withdraw';
 
-export function VaultActionTabs({ chainId, vaultAddress, accessManagerUrl }: Props) {
+export function MantleVaultActionTabs({ chainId, vaultAddress }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('deposit');
+  const { vaultState } = useVaultState(vaultAddress);
 
   return (
-    <div>
-      <div className="flex border-b mb-3">
+    <Card className="p-4 space-y-4">
+      {/* Vault badge */}
+      {vaultState && (
+        <div className="flex items-center gap-2">
+          {vaultState.asset && (
+            <TokenIcon chainId={chainId} address={vaultState.asset} className="w-5 h-5" />
+          )}
+          <span className="text-sm font-semibold">{vaultState.name}</span>
+        </div>
+      )}
+
+      {/* Tab bar */}
+      <div className="flex border-b">
         {(['deposit', 'withdraw'] as const).map((tab) => (
           <button
             key={tab}
@@ -36,11 +50,13 @@ export function VaultActionTabs({ chainId, vaultAddress, accessManagerUrl }: Pro
           </button>
         ))}
       </div>
+
+      {/* Form */}
       {activeTab === 'deposit' ? (
-        <DepositForm chainId={chainId} vaultAddress={vaultAddress} accessManagerUrl={accessManagerUrl} />
+        <YoDepositForm chainId={chainId} vaultAddress={vaultAddress} />
       ) : (
-        <WithdrawForm chainId={chainId} vaultAddress={vaultAddress} accessManagerUrl={accessManagerUrl} />
+        <YoWithdrawForm chainId={chainId} vaultAddress={vaultAddress} />
       )}
-    </div>
+    </Card>
   );
 }
