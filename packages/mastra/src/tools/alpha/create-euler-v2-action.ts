@@ -5,7 +5,7 @@ import { PlasmaVault, EulerV2 } from '@wgenie/fusion-sdk';
 import { getPublicClient } from '../plasma-vault/utils/viem-clients';
 import { buildTransactionProposal, transactionProposalOutputSchema } from './build-transaction-proposal';
 import { formatTokenAmount } from './format-amount';
-import { existingActionSchema } from '../yo-treasury/types';
+import { existingActionSchema } from '../wgenie-cfo/types';
 
 export const createEulerV2ActionTool = createTool({
   id: 'create-euler-v2-action',
