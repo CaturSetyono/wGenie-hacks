@@ -91,8 +91,11 @@ supabase start
 ```
 *Note: This command requires Docker to be running. Run `supabase stop` when you are done to save resources.*
 
+#### Database Migrations
+You do not need to run manual `db push` or migration commands! Because we use **Ponder** as our indexer, it automatically manages the database schema. Whenever you modify `packages/ponder/ponder.schema.ts` and restart Ponder, it will automatically drop and recreate the necessary tables in Supabase.
+
 #### Generating Database Types
-If you modify the database schema via Ponder or Supabase migrations, you must regenerate the TypeScript types:
+If you modify the database schema via Ponder, you must regenerate the TypeScript types for the frontend and API:
 ```bash
 pnpm --filter @wgenie/fusion-supabase-ponder gen:types
 ```
