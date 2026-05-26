@@ -1,76 +1,52 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useAccount, useSwitchChain } from 'wagmi';
 import {
-  useAccount,
-  useConnect,
-  useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useSwitchChain,
-} from 'wagmi';
-import { injected } from 'wagmi/connectors';
-import { erc20Abi, erc4626Abi, formatUnits, parseUnits, type Address } from 'viem';
+  useRedeem,
+  useVaultState,
+  useUserPosition,
+  useShareBalance,
+} from '@walletgenie-protocol/react';
+import { formatUnits, parseUnits, type Address } from 'viem';
+import { Loader2, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { TokenIcon } from '@/components/token-icon';
-import { Loader2, CheckCircle2, ExternalLink } from 'lucide-react';
-import { useVaultReads, formatAmountUsd } from '../hooks/use-vault-reads';
-import { useWhitelistRole } from '../hooks/use-whitelist-role';
+import { StepProgress } from './step-progress';
+import { PendingRedemptionBanner } from './pending-redemption-banner';
 
 interface Props {
   chainId: number;
   vaultAddress: Address;
-  accessManagerUrl?: string;
 }
 
-export function WithdrawForm({ chainId, vaultAddress, accessManagerUrl }: Props) {
+const REDEEM_STEPS = [
+  { key: 'approving', label: 'Approve' },
+  { key: 'redeeming', label: 'Redeem' },
+  { key: 'waiting', label: 'Confirm' },
+];
+
+export function YoWithdrawForm({ chainId, vaultAddress }: Props) {
   const { address: rawUserAddress, chain } = useAccount();
-  const { connect } = useConnect();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
   const [inputValue, setInputValue] = useState('');
   const [isMax, setIsMax] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Delay wallet-dependent rendering until after hydration
   const userAddress = mounted ? rawUserAddress : undefined;
   const isWrongChain = !!userAddress && chain?.id !== chainId;
 
-  // ─── Whitelist role check (only for vaults with access manager) ───
+  // ─── wgenie Protocol hooks ───
 
-  const { isWhitelisted, isLoading: isRoleLoading } = useWhitelistRole({
-    chainId,
-    vaultAddress,
-    enabled: !!accessManagerUrl,
-  });
+  const { vaultState } = useVaultState(vaultAddress);
+  const decimals = vaultState?.assetDecimals ?? 6;
+  const vaultDecimals = vaultState?.decimals ?? 18;
+  const symbol = vaultState?.symbol ?? '...';
+  const assetAddress = vaultState?.asset;
 
-  // ─── Shared on-chain reads ───
-
-  const {
-    assetAddress,
-    decimals,
-    symbol,
-    shareBalance,
-    positionAssets,
-    positionFormatted,
-    positionUsd,
-    tokenPriceUsd,
-    refetchShares,
-    refetchPosition,
-  } = useVaultReads({ chainId, vaultAddress, userAddress });
-
-  // ─── Withdraw-specific reads ───
-
-  const { data: walletBalance, refetch: refetchWalletBalance } = useReadContract({
-    chainId,
-    address: assetAddress!,
-    abi: erc20Abi,
-    functionName: 'balanceOf',
-    args: [userAddress!],
-    query: { enabled: !!userAddress && !!assetAddress },
-  });
+  const { position } = useUserPosition(vaultAddress, userAddress);
+  const { shares: currentShares } = useShareBalance(vaultAddress, userAddress);
 
   // ─── Derived values ───
 
@@ -84,70 +60,38 @@ export function WithdrawForm({ chainId, vaultAddress, accessManagerUrl }: Props)
     }
   }
 
-  const withdrawUsd = formatAmountUsd(withdrawAmount, decimals, tokenPriceUsd);
-
+  const positionAssets = position?.assets;
   const hasEnoughPosition =
     positionAssets !== undefined && withdrawAmount > 0n && withdrawAmount <= positionAssets;
 
-  // Convert input amount → shares for partial redeem
-  const { data: sharesToRedeem } = useReadContract({
-    chainId,
-    address: vaultAddress,
-    abi: erc4626Abi,
-    functionName: 'convertToShares',
-    args: [withdrawAmount],
-    query: { enabled: withdrawAmount > 0n && !isMax },
-  });
+  // Convert asset amount → shares proportionally
+  const sharesToRedeem = isMax
+    ? currentShares
+    : positionAssets && positionAssets > 0n && currentShares
+      ? (withdrawAmount * currentShares) / positionAssets
+      : undefined;
 
-  const sharesReady = isMax
-    ? shareBalance !== undefined && shareBalance > 0n
-    : sharesToRedeem !== undefined && sharesToRedeem > 0n;
+  const sharesReady = sharesToRedeem !== undefined && sharesToRedeem > 0n;
 
-  // ─── Redeem transaction ───
+  // ─── Redeem action ───
 
-  const {
-    writeContract: writeRedeem,
-    data: redeemTxHash,
-    isPending: isRedeeming,
-    error: redeemError,
-    reset: resetRedeem,
-  } = useWriteContract();
+  const { redeem, step, isError, error, isSuccess, instant, assetsOrRequestId, reset } =
+    useRedeem({
+      vault: vaultAddress,
+      onConfirmed: () => {
+        setInputValue('');
+        setIsMax(false);
+      },
+    });
 
-  const { isLoading: isRedeemConfirming, isSuccess: isRedeemConfirmed } =
-    useWaitForTransactionReceipt({ hash: redeemTxHash });
-
-  // ─── Effects ───
-
-  useEffect(() => {
-    if (isRedeemConfirmed) {
-      const refetchAll = () => {
-        refetchShares().then(() => refetchPosition());
-        refetchWalletBalance();
-      };
-      refetchAll();
-      // Retry after delay — RPC may return stale data right after tx confirmation
-      setTimeout(refetchAll, 2000);
-      resetRedeem();
-      setInputValue('');
-      setIsMax(false);
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-    }
-  }, [isRedeemConfirmed, refetchShares, refetchPosition, refetchWalletBalance, resetRedeem]);
+  const isActive = step !== 'idle' && step !== 'success' && step !== 'error';
 
   // ─── Handlers ───
 
-  const handleRedeem = useCallback(() => {
-    if (!userAddress) return;
-    const shares = isMax ? shareBalance! : sharesToRedeem!;
-    writeRedeem({
-      address: vaultAddress,
-      abi: erc4626Abi,
-      functionName: 'redeem',
-      args: [shares, userAddress, userAddress],
-      chainId,
-    });
-  }, [vaultAddress, userAddress, chainId, isMax, shareBalance, sharesToRedeem, writeRedeem]);
+  const handleRedeem = useCallback(async () => {
+    if (!sharesToRedeem || sharesToRedeem === 0n) return;
+    await redeem(sharesToRedeem);
+  }, [sharesToRedeem, redeem]);
 
   const handleMax = useCallback(() => {
     if (positionAssets !== undefined) {
@@ -156,73 +100,49 @@ export function WithdrawForm({ chainId, vaultAddress, accessManagerUrl }: Props)
     }
   }, [positionAssets, decimals]);
 
-  // ─── State flags ───
-
-  const isBusy = isRedeeming || isRedeemConfirming;
-
-  const requiresWhitelist = !!accessManagerUrl;
+  // ─── Button state ───
 
   const buttonLabel = (() => {
     if (!userAddress) return 'Connect Wallet';
-    if (requiresWhitelist && !isWhitelisted) return 'Not whitelisted';
-    if (isRedeeming) return 'Confirm in wallet...';
-    if (isRedeemConfirming) return 'Withdrawing...';
+    if (isActive) return 'Processing...';
     if (parseError) return 'Invalid amount';
     if (withdrawAmount === 0n) return 'Enter amount';
     if (!hasEnoughPosition) return 'Exceeds position';
     return 'Withdraw';
   })();
 
-  const buttonDisabled = !userAddress
-    ? false
-    : (requiresWhitelist && !isWhitelisted) ||
-      withdrawAmount === 0n ||
-      parseError ||
-      !hasEnoughPosition ||
-      !sharesReady ||
-      isBusy;
+  const buttonDisabled =
+    !userAddress ||
+    withdrawAmount === 0n ||
+    parseError ||
+    !hasEnoughPosition ||
+    !sharesReady ||
+    isActive;
+
+  const formatNum = (val: string | number) =>
+    Number(val).toLocaleString(undefined, { maximumFractionDigits: 4 });
+
+  const positionFormatted =
+    positionAssets !== undefined ? formatUnits(positionAssets, decimals) : undefined;
 
   // ─── Render ───
 
   return (
-    <Card className="p-4 space-y-3">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">Withdraw {symbol}</span>
-        {assetAddress && (
-          <TokenIcon chainId={chainId} address={assetAddress} className="w-5 h-5" />
-        )}
-      </div>
-
-      {/* Whitelist status + Access Manager link */}
-      {accessManagerUrl && (
-        <div className="flex items-center justify-between text-xs">
-          <div>
-            {userAddress && !isWrongChain && (
-              isRoleLoading ? (
-                <span className="text-muted-foreground">Checking role...</span>
-              ) : isWhitelisted ? (
-                <span className="text-green-500 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Whitelisted
-                </span>
-              ) : (
-                <span className="text-destructive">Not whitelisted</span>
-              )
-            )}
-          </div>
-          <a
-            href={accessManagerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:underline flex items-center gap-1"
-          >
-            Manage roles <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-      )}
+    <div className="space-y-3">
+      {/* Pending redemption banner */}
+      {userAddress && <PendingRedemptionBanner vaultAddress={vaultAddress} />}
 
       {/* Amount input */}
       <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">You withdraw</span>
+          {assetAddress && (
+            <div className="flex items-center gap-1.5">
+              <TokenIcon chainId={chainId} address={assetAddress} className="w-4 h-4" />
+              <span className="text-xs font-medium">{symbol}</span>
+            </div>
+          )}
+        </div>
         <input
           type="text"
           inputMode="decimal"
@@ -235,68 +155,92 @@ export function WithdrawForm({ chainId, vaultAddress, accessManagerUrl }: Props)
               setIsMax(false);
             }
           }}
-          disabled={isBusy}
+          disabled={isActive}
           className="w-full bg-transparent text-lg font-mono outline-none placeholder:text-muted-foreground"
         />
-        <div className="text-xs text-muted-foreground">{withdrawUsd}</div>
-      </div>
-
-      {/* Vault position — always rendered to avoid hydration mismatch */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">
-          Position: {positionFormatted !== undefined
-            ? `${Number(positionFormatted).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${symbol}`
-            : '...'
-          }
-        </span>
-        <button
-          type="button"
-          onClick={handleMax}
-          disabled={isBusy || !positionAssets || positionAssets === 0n}
-          className="text-primary font-medium hover:underline disabled:opacity-50"
-        >
-          Max
-        </button>
-      </div>
-
-      {/* Summary */}
-      <div className="border-t pt-3 space-y-1.5 text-xs">
-        {withdrawAmount > 0n && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Withdraw ({symbol})</span>
-            <span className="font-mono">
-              {Number(formatUnits(withdrawAmount, decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </span>
-          </div>
-        )}
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Your Position</span>
-          <span className="font-mono">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
             {positionFormatted !== undefined
-              ? `${Number(positionFormatted).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${symbol} (${positionUsd})`
-              : '-'
-            }
+              ? `Position: ${formatNum(positionFormatted)}`
+              : 'Position: ...'}
           </span>
+          <button
+            type="button"
+            onClick={handleMax}
+            disabled={isActive || !positionAssets || positionAssets === 0n}
+            className="text-xs text-primary font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Max
+          </button>
         </div>
       </div>
 
-      {/* Success banner */}
-      {showSuccess && (
+      {/* Shares info */}
+      {sharesToRedeem && sharesToRedeem > 0n && (
+        <div className="flex items-center justify-between text-xs px-1">
+          <span className="text-muted-foreground">Shares to redeem</span>
+          <span className="font-mono">
+            {formatNum(formatUnits(sharesToRedeem, vaultDecimals))}
+          </span>
+        </div>
+      )}
+
+      {/* Step progress */}
+      {isActive && (
+        <div className="rounded-lg border bg-muted/30 p-3">
+          <StepProgress steps={REDEEM_STEPS} currentStep={step} />
+        </div>
+      )}
+
+      {/* Success — instant */}
+      {isSuccess && instant === true && (
         <div className="flex items-center gap-2 text-green-500 text-xs">
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Withdrawal successful!</span>
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span className="font-medium">Withdrawal complete!</span>
+          <button
+            type="button"
+            onClick={reset}
+            className="ml-auto text-muted-foreground hover:underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Success — queued */}
+      {isSuccess && instant === false && (
+        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 space-y-1">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-yellow-600 dark:text-yellow-400 shrink-0" />
+            <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
+              Redemption queued
+            </span>
+            <button
+              type="button"
+              onClick={reset}
+              className="ml-auto text-xs text-muted-foreground hover:underline"
+            >
+              Dismiss
+            </button>
+          </div>
+          {assetsOrRequestId && (
+            <p className="text-[11px] text-muted-foreground pl-6 font-mono">
+              Request ID: {assetsOrRequestId}
+            </p>
+          )}
+          <p className="text-[11px] text-muted-foreground pl-6">
+            Your withdrawal is being processed. Assets will be available once fulfilled.
+          </p>
         </div>
       )}
 
       {/* Error */}
-      {redeemError && !isBusy && (
+      {isError && error && (
         <div className="space-y-1">
-          <p className="text-xs text-destructive">
-            {redeemError.message.slice(0, 150)}
-          </p>
+          <p className="text-xs text-destructive">{error.message.slice(0, 150)}</p>
           <button
             type="button"
-            onClick={() => resetRedeem()}
+            onClick={reset}
             className="text-xs text-muted-foreground hover:underline"
           >
             Try again
@@ -304,28 +248,29 @@ export function WithdrawForm({ chainId, vaultAddress, accessManagerUrl }: Props)
         </div>
       )}
 
-      {/* Action button */}
+      {/* CTA */}
       {isWrongChain ? (
         <Button
           onClick={() => switchChain({ chainId })}
           disabled={isSwitching}
           size="sm"
+          variant="outline"
           className="w-full"
         >
           {isSwitching && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-          {isSwitching ? 'Switching...' : `Switch to chain ${chainId}`}
+          {isSwitching ? 'Switching...' : 'Switch Network'}
         </Button>
       ) : (
         <Button
-          onClick={!userAddress ? () => connect({ connector: injected() }) : handleRedeem}
+          onClick={handleRedeem}
           disabled={buttonDisabled}
           size="sm"
           className="w-full"
         >
-          {isBusy && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+          {isActive && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
           {buttonLabel}
         </Button>
       )}
-    </Card>
+    </div>
   );
 }
