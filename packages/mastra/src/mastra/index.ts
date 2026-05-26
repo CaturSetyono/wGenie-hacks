@@ -5,7 +5,7 @@ import { Observability, DefaultExporter, CloudExporter, SensitiveDataFilter } fr
 import { chatRoute } from '@mastra/ai-sdk';
 import { createMiddleware } from 'hono/factory';
 import { alphaAgent } from '../agents/alpha-agent';
-import { yoTreasuryAgent } from '../agents/yo-treasury-agent';
+import { wgenieCfoAgent } from '../agents/wgenie-cfo-agent';
 import { createStorage } from '../storage';
 
 const apiKeyMiddleware = createMiddleware(async (c, next) => {
@@ -22,7 +22,7 @@ const apiKeyMiddleware = createMiddleware(async (c, next) => {
 });
 
 export const mastra = new Mastra({
-  agents: { alphaAgent, yoTreasuryAgent },
+  agents: { alphaAgent, wgenieCfoAgent },
   deployer: new VercelDeployer({
     regions: ['fra1'],
     maxDuration: 60,
