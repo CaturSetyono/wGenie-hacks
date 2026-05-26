@@ -1,5 +1,5 @@
 import { type Address, erc20Abi, formatUnits } from 'viem';
-import { createYoClient } from '@yo-protocol/core';
+import { createMantleClient } from '@walletgenie-protocol/core';
 import { getPublicClient } from './clients';
 import { getFromCache, setInCache, getCacheKey } from './cache';
 
@@ -53,7 +53,7 @@ const isContractRevert = (error: unknown): boolean =>
   (error.name === 'ContractFunctionExecutionError' ||
     error.name === 'ContractFunctionRevertedError');
 
-// Fallback price source for vaults without getPriceOracleMiddleware (e.g. yo-vaults)
+// Fallback price source for vaults without getPriceOracleMiddleware (e.g. wgenie-vaults)
 const SYMBOL_TO_COINGECKO_ID: Record<string, string> = {
   USDC: 'usd-coin',
   WETH: 'ethereum',
@@ -73,7 +73,7 @@ async function getFallbackPrice(symbol: string): Promise<number> {
   const now = Date.now();
   if (!_fallbackPrices || now - _fallbackFetchedAt > FALLBACK_PRICE_TTL) {
     try {
-      const client = createYoClient({ chainId: 8453 });
+      const client = createMantleClient({ chainId: 8453 });
       const prices = await client.getPrices();
       _fallbackPrices = {};
       for (const [key, value] of Object.entries(prices)) {
@@ -178,7 +178,7 @@ export const fetchVaultRpcData = async (
     } catch (error) {
       const msg = error instanceof Error ? (error as Error & { shortMessage?: string }).shortMessage ?? error.message : String(error);
       console.warn(`Failed to fetch price for ${chainId}:${vaultAddress}: ${msg}`);
-      // Fallback: try yo-protocol price API for known tokens
+      // Fallback: try walletgenie-protocol price API for known tokens
       assetUsdPrice = await getFallbackPrice(assetSymbol);
       if (assetUsdPrice > 0) {
         tvlUsd =
