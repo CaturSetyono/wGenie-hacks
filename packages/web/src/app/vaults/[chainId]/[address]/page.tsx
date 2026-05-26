@@ -1,7 +1,7 @@
 import { VaultOverviewContent } from '@/vault-details/components/vault-overview-content';
 import { getVaultFromRegistry } from '@/lib/vaults-registry';
-import { YoTreasuryOverview } from '@/yo-treasury/components/yo-treasury-overview';
-import { YoVaultOverview } from '@/yo-treasury/components/yo-vault-overview';
+import { TreasuryOverview } from '@/wgenie-cfo/components/wgenie-cfo-overview';
+import { MantleVaultOverview } from '@/wgenie-cfo/components/vault-overview';
 import type { ChainId } from '@/app/chains.config';
 import type { Address } from 'viem';
 
@@ -19,22 +19,22 @@ export default async function VaultOverviewPage({
   const { chainId, address } = await params;
   const vault = getVaultFromRegistry(Number(chainId), address);
 
-  if (vault?.tags.includes('yo-treasury')) {
+  if (vault?.tags.includes('wgenie-cfo')) {
     return (
-      <YoTreasuryOverview
+      <TreasuryOverview
         chainId={Number(chainId) as ChainId}
         vaultAddress={address as Address}
       />
     );
   }
 
-  const isYoVault = vault?.tags.includes('yo-vault');
+  const isMantleVault = vault?.tags.includes('wgenie-vault');
 
   return (
     <div className="space-y-6">
       <VaultOverviewContent />
-      {isYoVault && (
-        <YoVaultOverview
+      {isMantleVault && (
+        <MantleVaultOverview
           chainId={Number(chainId) as ChainId}
           vaultAddress={address as Address}
         />
