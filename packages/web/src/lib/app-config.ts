@@ -55,21 +55,21 @@ const fusionConfig: AppConfig = {
   },
 };
 
-const yoConfig: AppConfig = {
-  id: 'yo',
-  name: 'YO Treasury',
-  title: 'YO Treasury',
-  description: 'YO Protocol Treasury Management',
-  logo: '/assets/yo/yo_no_bg.svg',
-  themeClass: 'yo dark',
+const wgenieConfig: AppConfig = {
+  id: 'wgenie',
+  name: 'WalletGenie Treasury',
+  title: 'WalletGenie Treasury',
+  description: 'wgenie Protocol Treasury Management',
+  logo: '/assets/wgenie/wgenie_no_bg.svg',
+  themeClass: 'wgenie dark',
   navItems: [
     { title: 'Home', url: '/', icon: Home },
     {
-      title: 'YO Treasury',
+      title: 'WalletGenie Treasury',
       url: '/vaults/8453/0x09d1C2E03F73853916Ee86b4e1A729F9FbAA960D',
       icon: Landmark,
     },
-    { title: 'Create YO Treasury', url: '/yo-treasury/create', icon: Plus },
+    { title: 'Create WalletGenie Treasury', url: '/wgenie-cfo/create', icon: Plus },
   ],
   features: {
     alphaTab: false,
@@ -126,7 +126,7 @@ function atomistConfig(id: AppId, name: string, logo: string): AppConfig {
 const configs: Record<ConfigId, AppConfig> = {
   all: allConfig,
   fusion: fusionConfig,
-  yo: yoConfig,
+  wgenie: wgenieConfig,
   'wgenie-dao': atomistConfig(
     'wgenie-dao',
     'wGenie DAO',
@@ -220,7 +220,7 @@ export function getAppConfig(): AppConfig {
 
 const APP_THEME_CLASS: Partial<Record<AppId, string>> = {
   fusion: 'fusion',
-  yo: 'yo dark',
+  wgenie: 'wgenie dark',
 };
 
 export function getThemeClassForVaultApps(apps: AppId[]): string {
