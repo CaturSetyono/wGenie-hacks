@@ -159,7 +159,7 @@ export async function readVaultBalances(
       .map((s) => substrateToAddress(s))
       .filter((addr): addr is Address => addr !== undefined);
 
-    // Merge additional token addresses (e.g. YO vault underlyings)
+    // Merge additional token addresses (e.g. Mantle vault underlyings)
     if (additionalTokenAddresses) {
       const addrSet = new Set(tokenAddresses.map(a => a.toLowerCase()));
       for (const addr of additionalTokenAddresses) {
