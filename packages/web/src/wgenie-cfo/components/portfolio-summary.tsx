@@ -2,7 +2,6 @@
 
 import type { Address } from 'viem';
 import { Wallet, TrendingUp, Layers, Shield } from 'lucide-react';
-import { useTotalTvl } from '@walletgenie-protocol/react';
 import type { TreasuryPosition } from '../hooks/use-treasury-positions';
 import { useAlphaRole } from '../hooks/use-alpha-role';
 
@@ -74,10 +73,6 @@ export function PortfolioSummary({
     vaultAddress,
     userAddress,
   });
-  const { tvl: totalTvlData } = useTotalTvl();
-  const protocolTvl = totalTvlData?.length
-    ? totalTvlData[totalTvlData.length - 1]
-    : null;
 
   if (isLoading) {
     return (
@@ -116,9 +111,7 @@ export function PortfolioSummary({
       <StatCard
         label="Total Value"
         value={formatUsd(totalUsd)}
-        subValue={protocolTvl
-          ? `wgenie Protocol TVL: $${(parseFloat(protocolTvl.tvlUsd) / 1_000_000).toFixed(1)}M`
-          : 'treasury holdings'}
+        subValue="treasury holdings"
         icon={Wallet}
         accent
       />
