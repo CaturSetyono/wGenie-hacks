@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useVaultState } from '@walletgenie-protocol/react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
-import { TokenIcon } from '@/components/token-icon';
 import { YoDepositForm } from './deposit-form';
 import { YoWithdrawForm } from './withdraw-form';
 import type { ChainId } from '@/app/chains.config';
@@ -19,20 +17,9 @@ type Tab = 'deposit' | 'withdraw';
 
 export function MantleVaultActionTabs({ chainId, vaultAddress }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('deposit');
-  const { vaultState } = useVaultState(vaultAddress);
 
   return (
     <Card className="p-4 space-y-4">
-      {/* Vault badge */}
-      {vaultState && (
-        <div className="flex items-center gap-2">
-          {vaultState.asset && (
-            <TokenIcon chainId={chainId} address={vaultState.asset} className="w-5 h-5" />
-          )}
-          <span className="text-sm font-semibold">{vaultState.name}</span>
-        </div>
-      )}
-
       {/* Tab bar */}
       <div className="flex border-b">
         {(['deposit', 'withdraw'] as const).map((tab) => (
