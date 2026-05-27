@@ -3,13 +3,11 @@
 import { TrendingUp, DollarSign, BarChart3, Activity, Award } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useVaultPercentile } from '@walletgenie-protocol/react';
-import type { VaultSnapshot, VaultPerformance } from '@walletgenie-protocol/core';
 import type { Address } from 'viem';
 
 interface Props {
-  snapshot: VaultSnapshot | undefined;
-  performance: VaultPerformance | undefined;
+  snapshot: any;
+  performance: any;
   vaultAddress: Address;
   isLoading: boolean;
 }
@@ -27,7 +25,6 @@ function formatTvl(formatted: string | undefined): string {
 }
 
 export function MantleVaultMetrics({ snapshot, performance, vaultAddress, isLoading }: Props) {
-  const { percentile } = useVaultPercentile(vaultAddress);
 
   if (isLoading) {
     return (
@@ -79,12 +76,8 @@ export function MantleVaultMetrics({ snapshot, performance, vaultAddress, isLoad
     },
     {
       title: 'DeFi Ranking',
-      value: percentile?.yoRanking
-        ? `Top ${percentile.yoRanking}%`
-        : '—',
-      description: percentile?.pools
-        ? `vs ${percentile.pools} DeFi pools`
-        : '',
+      value: '—',
+      description: '',
       icon: <Award className="h-4 w-4" />,
     },
   ];
