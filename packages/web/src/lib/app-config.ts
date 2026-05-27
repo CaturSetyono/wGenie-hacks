@@ -66,7 +66,7 @@ const wgenieConfig: AppConfig = {
     { title: 'Home', url: '/', icon: Home },
     {
       title: 'WalletGenie Treasury',
-      url: '/vaults/8453/0x09d1C2E03F73853916Ee86b4e1A729F9FbAA960D',
+      url: '/vaults/5000/0x0000000000000000000000000000000000000000',
       icon: Landmark,
     },
   ],
