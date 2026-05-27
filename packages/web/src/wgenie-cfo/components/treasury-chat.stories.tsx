@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { WalletDecorator } from '@/app/wallet.decorator';
-import { TreasuryOverview } from './wgenie-cfo-overview';
+import { TreasuryOverview } from './treasury-overview';
 
 const meta: Meta<typeof TreasuryOverview> = {
   title: 'WalletGenie Treasury / Chat',
