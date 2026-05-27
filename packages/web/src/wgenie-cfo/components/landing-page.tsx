@@ -14,8 +14,6 @@ import {
 } from 'lucide-react';
 
 const VAULT_URL = '/vaults/8453/0x09d1C2E03F73853916Ee86b4e1A729F9FbAA960D';
-const CREATE_URL = '/wgenie-cfo/create';
-
 const FEATURES = [
   {
     icon: Zap,
@@ -104,12 +102,6 @@ export function YoLandingPage() {
             >
               Open App
               <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href={CREATE_URL}
-              className="inline-flex items-center justify-center px-8 py-3.5 rounded-lg border border-primary/30 text-primary font-medium text-base hover:bg-primary/10 transition-colors"
-            >
-              Create WalletGenie Treasury
             </Link>
           </div>
         </div>
@@ -436,12 +428,6 @@ export function YoLandingPage() {
             >
               Open App
               <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href={CREATE_URL}
-              className="inline-flex items-center justify-center px-8 py-3.5 rounded-lg border border-primary/30 text-primary font-medium text-base hover:bg-primary/10 transition-colors"
-            >
-              Create WalletGenie Treasury
             </Link>
           </div>
         </div>
