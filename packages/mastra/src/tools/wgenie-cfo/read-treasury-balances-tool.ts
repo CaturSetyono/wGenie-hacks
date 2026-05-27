@@ -2,7 +2,7 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { type Address } from 'viem';
 import { getPublicClient } from '../plasma-vault/utils/viem-clients';
-import { readTreasuryBalances } from './read-wgenie-cfo-balances';
+import { readTreasuryBalances } from './read-treasury-balances';
 import { mapMantlePositionsToMarkets } from './map-to-market-balances';
 
 export const readTreasuryBalancesTool = createTool({
@@ -40,7 +40,7 @@ This tool returns raw data for your reasoning — it does NOT render UI.`,
         type: 'balance-check' as const,
         success: true,
         assets: snapshot.assets,
-        markets: mapMantlePositionsToMarkets(snapshot.yoPositions),
+        markets: mapMantlePositionsToMarkets(snapshot.mantlePositions),
         totalValueUsd: snapshot.totalValueUsd,
       };
     } catch (error) {
