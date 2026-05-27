@@ -1,6 +1,6 @@
 import { VaultOverviewContent } from '@/vault-details/components/vault-overview-content';
 import { getVaultFromRegistry } from '@/lib/vaults-registry';
-import { TreasuryOverview } from '@/wgenie-cfo/components/wgenie-cfo-overview';
+import { TreasuryOverview } from '@/wgenie-cfo/components/treasury-overview';
 import { MantleVaultOverview } from '@/wgenie-cfo/components/vault-overview';
 import type { ChainId } from '@/app/chains.config';
 import type { Address } from 'viem';
