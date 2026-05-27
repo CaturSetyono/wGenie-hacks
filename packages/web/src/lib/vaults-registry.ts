@@ -95,8 +95,7 @@ export const getChainName = (chainId: number): string => {
 // Tag constants
 export const VAULT_TAG = {
   wGenie_FUSION: 'wgenie-fusion',
-  YO_TREASURY: 'wgenie-cfo',
-  YO_VAULT: 'wgenie-vault',
+  TREASURY: 'wgenie-cfo',
 } as const;
 
 export type VaultTag = (typeof VAULT_TAG)[keyof typeof VAULT_TAG];
