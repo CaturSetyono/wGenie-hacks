@@ -4,6 +4,6 @@
     "outDir": "./dist",
     "rootDir": "."
   },
-  "include": ["test/**/*", "lib/**/*"],
+  "include": ["test/**/*", "lib/**/*", "scripts/**/*"],
   "references": [{ "path": "../sdk" }]
 }
