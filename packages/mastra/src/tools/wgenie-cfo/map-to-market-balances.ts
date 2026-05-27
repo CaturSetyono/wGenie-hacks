@@ -1,8 +1,8 @@
 import type { MarketAllocation } from '../alpha/types';
-import type { YoPosition } from './read-wgenie-cfo-balances';
+import type { MantlePosition } from './read-treasury-balances';
 
-/** Map YoPosition[] to a single grouped MarketAllocation */
-export function mapMantlePositionsToMarkets(yoPositions: YoPosition[]): MarketAllocation[] {
+/** Map MantlePosition[] to a single grouped MarketAllocation */
+export function mapMantlePositionsToMarkets(yoPositions: MantlePosition[]): MarketAllocation[] {
   if (yoPositions.length === 0) return [];
 
   return [{
