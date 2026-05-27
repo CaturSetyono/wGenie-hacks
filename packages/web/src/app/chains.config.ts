@@ -1,8 +1,8 @@
-import { arbitrum, base, mainnet } from 'viem/chains';
+import { arbitrum, base, mainnet, mantle } from 'viem/chains';
 import z from 'zod';
 
-export const ALLOWED_CHAINS = [mainnet, arbitrum, base] as const;
-export const ALLOWED_CHAIN_IDS = [mainnet.id, arbitrum.id, base.id] as const;
+export const ALLOWED_CHAINS = [mainnet, arbitrum, base, mantle] as const;
+export const ALLOWED_CHAIN_IDS = [mainnet.id, arbitrum.id, base.id, mantle.id] as const;
 
 export type ChainId = (typeof ALLOWED_CHAIN_IDS)[number];
 
