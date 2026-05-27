@@ -1,5 +1,4 @@
 import { type Address, erc20Abi, formatUnits } from 'viem';
-import { createMantleClient } from '@walletgenie-protocol/core';
 import { getPublicClient } from './clients';
 import { getFromCache, setInCache, getCacheKey } from './cache';
 
@@ -73,11 +72,12 @@ async function getFallbackPrice(symbol: string): Promise<number> {
   const now = Date.now();
   if (!_fallbackPrices || now - _fallbackFetchedAt > FALLBACK_PRICE_TTL) {
     try {
-      const client = createMantleClient({ chainId: 8453 });
-      const prices = await client.getPrices();
+      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`;
+      const res = await fetch(url);
+      const json = await res.json();
       _fallbackPrices = {};
-      for (const [key, value] of Object.entries(prices)) {
-        _fallbackPrices[key.toLowerCase()] = value as number;
+      for (const [key, value] of Object.entries(json)) {
+        _fallbackPrices[key.toLowerCase()] = (value as { usd: number }).usd;
       }
       _fallbackFetchedAt = now;
     } catch {
@@ -85,7 +85,7 @@ async function getFallbackPrice(symbol: string): Promise<number> {
     }
   }
 
-  return _fallbackPrices?.[id] ?? 0;
+  return _fallbackPrices?.[id.toLowerCase()] ?? 0;
 }
 
 const fetchWithRetry = async <T>(
