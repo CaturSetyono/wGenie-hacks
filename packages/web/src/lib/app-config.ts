@@ -69,7 +69,6 @@ const wgenieConfig: AppConfig = {
       url: '/vaults/8453/0x09d1C2E03F73853916Ee86b4e1A729F9FbAA960D',
       icon: Landmark,
     },
-    { title: 'Create WalletGenie Treasury', url: '/wgenie-cfo/create', icon: Plus },
   ],
   features: {
     alphaTab: false,
@@ -123,7 +122,7 @@ function atomistConfig(id: AppId, name: string, logo: string): AppConfig {
   };
 }
 
-const configs: Record<ConfigId, AppConfig> = {
+const configs: Record<string, AppConfig> = {
   all: allConfig,
   fusion: fusionConfig,
   wgenie: wgenieConfig,
