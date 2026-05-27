@@ -61,6 +61,18 @@ export { pegStabilityModuleAbi } from './markets/reservoir/abi/peg-stability-mod
 export { creditEnforcerAbi } from './markets/reservoir/abi/credit-enforcer.abi';
 export { rusdSavingsModuleAbi } from './markets/reservoir/abi/rusd-savings-module.abi';
 export { RUSD_SAVINGS_MODULE_ADDRESS } from './markets/reservoir/reservoir.addresses';
-export { ERC4626_ZAP_IN_WITH_NATIVE_TOKEN_ADDRESS } from './fusion.addresses';
+export {
+  ERC4626_ZAP_IN_WITH_NATIVE_TOKEN_ADDRESS,
+  FUSION_FACTORY_ADDRESS,
+  ERC4626_SUPPLY_FUSE_SLOT1_ADDRESS,
+  ERC4626_SUPPLY_FUSE_SLOT2_ADDRESS,
+  ERC4626_SUPPLY_FUSE_SLOT3_ADDRESS,
+  ERC4626_SUPPLY_FUSE_SLOT4_ADDRESS,
+  ERC4626_BALANCE_FUSE_SLOT1_ADDRESS,
+  ERC4626_BALANCE_FUSE_SLOT2_ADDRESS,
+  ERC4626_BALANCE_FUSE_SLOT3_ADDRESS,
+  ERC4626_BALANCE_FUSE_SLOT4_ADDRESS,
+  UNIVERSAL_TOKEN_SWAPPER_FUSE_ADDRESS,
+} from './fusion.addresses';
 export { addressSchema, hexSchema } from './utils/schema';
 
