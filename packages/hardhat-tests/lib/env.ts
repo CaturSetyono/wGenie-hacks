@@ -4,6 +4,8 @@ import { z } from 'zod';
 const envSchema = z.object({
   RPC_URL_MAINNET: z.string().url('RPC_URL_MAINNET must be a valid URL'),
   RPC_URL_BASE: z.string().url('RPC_URL_BASE must be a valid URL'),
+  RPC_URL_MANTLE_SEPOLIA: z.string().url('RPC_URL_MANTLE_SEPOLIA must be a valid URL').optional(),
+  DEPLOYER_PRIVATE_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
