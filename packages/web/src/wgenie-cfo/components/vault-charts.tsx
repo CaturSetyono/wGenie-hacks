@@ -13,7 +13,10 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { TimeseriesPoint } from '@walletgenie-protocol/core';
+interface TimeseriesPoint {
+  timestamp: number;
+  value: number;
+}
 
 interface Props {
   yieldHistory: TimeseriesPoint[] | undefined;
