@@ -22,6 +22,7 @@ const transports = {
   [ALLOWED_CHAIN_IDS[0]]: http(process.env.NEXT_PUBLIC_RPC_URL_MAINNET),
   [ALLOWED_CHAIN_IDS[1]]: http(process.env.NEXT_PUBLIC_RPC_URL_ARBITRUM),
   [ALLOWED_CHAIN_IDS[2]]: http(process.env.NEXT_PUBLIC_RPC_URL_BASE),
+  [ALLOWED_CHAIN_IDS[3]]: http(process.env.NEXT_PUBLIC_RPC_URL_MANTLE),
 };
 
 export const config = createConfig({
