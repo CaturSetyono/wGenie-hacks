@@ -31,41 +31,36 @@ When modifying `packages/ponder/ponder.schema.ts`:
 pnpm --filter @wgenie/fusion-supabase-ponder gen:types
 ```
 
+### Smart Contracts (Foundry)
+```bash
+# Compile contracts
+~/.foundry/bin/forge build
+
+# Deploy to Mantle Sepolia
+pnpm deploy:mantle
+
+# Cast (read contract)
+~/.foundry/bin/forge script packages/hardhat-tests/script/Deploy.s.sol --rpc-url mantle_sepolia --broadcast -vvvv
+
+# Interact with deployed contract
+source packages/hardhat-tests/.env && ~/.foundry/bin/cast call <address> "owner()(address)" --rpc-url $RPC_URL_MANTLE_SEPOLIA
+```
+
 ## Project Structure
 - `packages/web` - Next.js frontend
 - `packages/ponder` - Blockchain event indexer
 - `packages/mastra` - AI agents (WalletGenie CFO)
 - `packages/supabase-ponder` - Supabase client for Ponder data
 - `packages/sdk` - Shared ABIs and helpers
+- `packages/hardhat-tests/contracts/` - Solidity contracts
+- `packages/hardhat-tests/script/` - Foundry deploy scripts
+- `foundry.toml` - Foundry config (use `~/.foundry/bin/forge`)
 
 ## Key Conventions
 1. **Always start database first**: `pnpm db:start` before running Ponder
 2. **Ponder auto-migrates**: Schema changes in `ponder.schema.ts` apply automatically on restart
 3. **Environment setup**: Copy `.env.example` to `.env.local`/`.env` in each package
 4. **Monorepo commands**: Use `pnpm --filter <package> <script>` for package-specific operations
-
-## Known Build Issues & Fixes Applied
-During build, encountered multiple issues:
-
-1. **Missing component import**: 
-   - Error: `Can't resolve '@/wgenie-cfo/components/wgenie-cfo-overview'`
-   - Fix: Changed import in `packages/web/src/app/vaults/[chainId]/[address]/page.tsx` from 
-     `@/wgenie-cfo/components/wgenie-cfo-overview` to `@/wgenie-cfo/components/treasury-overview`
-
-2. **Missing protocol package**:
-   - Error: `Can't resolve '@walletgenie-protocol/core'` and similar
-   - These imports appear throughout the codebase (e.g., in `wgenie-cfo` components and hooks, `lib/rpc/vault-rpc-data.ts`)
-   - The package `@walletgenie-protocol` is not found in dependencies or as a local package
-   - **Fix applied**: Replaced all `@walletgenie-protocol` imports with `@yo-protocol` and added `@yo-protocol/core@1.0.9` as a dependency
-   - **Note for agents**: When seeing `@walletgenie-protocol` imports, use `@yo-protocol` instead and ensure `@yo-protocol/core` is installed
-
-3. **Missing SDK constants**:
-   - Error: `Export CMBTC_ADDRESS doesn't exist in target module` and similar errors for `FUSION_FACTORY_ADDRESS`, `ERC4626_SUPPLY_FUSE_SLOT1_ADDRESS`, etc.
-   - These constants are imported in `packages/web/src/app/cfo/create/vault-creation.constants.ts` from `@wgenie/fusion-sdk` but are not exported by the SDK
-   - **Current status**: Issue not resolved - these constants need to be either:
-     * Added to the SDK (`packages/sdk/src/fusion.addresses.ts` or similar)
-     * Generated from a data source (possibly `plasma-vaults.json`)
-     * The import path needs to be corrected if they exist elsewhere
 
 ## Testing
 ```bash
@@ -82,6 +77,6 @@ pnpm test:hardhat
 - LLM API keys needed in `packages/mastra/.env`
 - Ponder handles DB schema - no manual migrations needed
 - This project integrates with Mantle network (Chain ID: 5000 for mainnet, 5003 for Sepolia testnet)
-- Uses yo-protocol (formerly Byreal protocol) for DeFi interactions - see mantle-reesources.md for Mantle ecosystem details
+- **Foundry**: Use `~/.foundry/bin/forge` (global `forge` is opencode AI tool, not Foundry)
+- **WalletGenieTreasury**: Deployed at `0x3c13BDd505DE69bB0DF0a2e68A0Cd93a44beB0b4` on Mantle Sepolia (5003)
 - When working with Mantle-specific features, refer to mantle-reesources.md for network configuration, DeFi protocols (Merchant Moe, Agni Finance, Fluxion), and RWA assets (USDY, mETH)
-- The missing SDK constants (FUSION_FACTORY_ADDRESS, ERC4626_SUPPLY_FUSE_SLOT*, CMBTC_ADDRESS, etc.) currently prevent full builds - refer to the Known Build Issues section for details
