@@ -1,0 +1,15 @@
+[profile.default]
+src = "packages/hardhat-tests/contracts"
+out = "packages/hardhat-tests/out"
+libs = ["lib", "node_modules"]
+solc_version = "0.8.28"
+evm_version = "cancun"
+via_ir = false
+
+[rpc_endpoints]
+mantle_sepolia = "${RPC_URL_MANTLE_SEPOLIA}"
+mantle_mainnet = "${RPC_URL_MANTLE_MAINNET}"
+
+[etherscan]
+mantle_sepolia = { key = "${MANTLESCAN_API_KEY}", url = "https://explorer.sepolia.mantle.xyz/api" }
+mantle_mainnet = { key = "${MANTLESCAN_API_KEY}", url = "https://explorer.mantle.xyz/api" }
