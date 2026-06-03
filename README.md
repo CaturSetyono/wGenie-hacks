@@ -132,5 +132,67 @@ pnpm dev:ponder
 
 ---
 
+## Proof of Deployment
+
+**WalletGenieTreasury** — deployed & verified on Mantle Sepolia testnet:
+
+| Field | Value |
+|-------|-------|
+| **Contract** | [`0x3c13BDd505DE69bB0DF0a2e68A0Cd93a44beB0b4`](https://explorer.sepolia.mantle.xyz/address/0x3c13BDd505DE69bB0DF0a2e68A0Cd93a44beB0b4) |
+| **Tx Hash** | [`0x465f208ea10482525c71299288bab5233e372de0e7a2afe150689839132e3faf`](https://explorer.sepolia.mantle.xyz/tx/0x465f208ea10482525c71299288bab5233e372de0e7a2afe150689839132e3faf) |
+| **Block** | `39471829` |
+| **Owner** | `0x3a8d93D5F52a26689b075A49E67F4f8924BeC84B` |
+| **Verification** | `cast call 0x3c13BDd505DE69bB0DF0a2e68A0Cd93a44beB0b4 "owner()(address)"` → `0x3a8d93D5F52a26689b075A49E67F4f8924BeC84B` ✅ |
+
+### On-Chain Verification Log
+
+```bash
+$ ~/.foundry/bin/forge script packages/hardhat-tests/script/Deploy.s.sol --rpc-url mantle_sepolia --broadcast -vvvv
+
+Script ran successfully.
+== Logs ==
+  === WalletGenieTreasury Deployed ===
+  Network:    Mantle Sepolia
+  Chain ID:   5003
+  Treasury:   0x3c13BDd505DE69bB0DF0a2e68A0Cd93a44beB0b4
+  Owner:      0x3a8d93D5F52a26689b075A49E67F4f8924BeC84B
+  Manager:    0x3a8d93D5F52a26689b075A49E67F4f8924BeC84B
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+Transactions saved to: broadcast/Deploy.s.sol/5003/run-latest.json
+```
+
+### Smart Contract Source
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+/// @title WalletGenieTreasury
+/// @notice Simple treasury vault managed by AI CFO agent on Mantle
+contract WalletGenieTreasury {
+    address public owner;
+    address public manager;
+    bool public paused;
+    mapping(address => uint256) public balances;
+
+    event Deposited(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+    event ManagerUpdated(address indexed manager);
+    event Paused(bool paused);
+    event Executed(address indexed target, uint256 value, bytes data);
+
+    function deposit() external payable notPaused { ... }
+    function withdraw(uint256 amount) external notPaused { ... }
+    function execute(address target, uint256 value, bytes calldata data)
+        external onlyManager notPaused returns (bytes memory) { ... }
+    function setManager(address _manager) external onlyOwner { ... }
+    function togglePause() external onlyOwner { ... }
+}
+```
+See full source at `packages/hardhat-tests/contracts/WalletGenieTreasury.sol`
+
+---
+
 ## License
 MIT
