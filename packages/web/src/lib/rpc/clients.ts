@@ -1,7 +1,7 @@
 import { createPublicClient, http, type PublicClient } from 'viem';
-import { mainnet, arbitrum, base, unichain, avalanche, plasma } from 'viem/chains';
+import { mainnet, arbitrum, base, unichain, avalanche, plasma, mantle, mantleSepoliaTestnet } from 'viem/chains';
 
-const chains = [mainnet, arbitrum, base, unichain, avalanche, plasma] as const;
+const chains = [mainnet, arbitrum, base, unichain, avalanche, plasma, mantle, mantleSepoliaTestnet] as const;
 
 const RPC_URLS: Record<number, string | undefined> = {
   [mainnet.id]: process.env.RPC_URL_MAINNET || process.env.NEXT_PUBLIC_RPC_URL_MAINNET,
@@ -10,6 +10,8 @@ const RPC_URLS: Record<number, string | undefined> = {
   [unichain.id]: process.env.RPC_URL_UNICHAIN || process.env.NEXT_PUBLIC_RPC_URL_UNICHAIN,
   [avalanche.id]: process.env.RPC_URL_AVALANCHE || process.env.NEXT_PUBLIC_RPC_URL_AVALANCHE,
   [plasma.id]: process.env.RPC_URL_PLASMA || process.env.NEXT_PUBLIC_RPC_URL_PLASMA,
+  [mantle.id]: process.env.RPC_URL_MANTLE || process.env.NEXT_PUBLIC_RPC_URL_MANTLE,
+  [mantleSepoliaTestnet.id]: process.env.RPC_URL_MANTLE_SEPOLIA || process.env.NEXT_PUBLIC_RPC_URL_MANTLE_SEPOLIA,
 };
 
 const clientCache = new Map<number, PublicClient>();
