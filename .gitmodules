@@ -4,3 +4,6 @@
 [submodule "external/core"]
 	path = external/core
 	url = https://github.com/maulana-tech/core.git
+[submodule "lib/forge-std"]
+	path = lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
