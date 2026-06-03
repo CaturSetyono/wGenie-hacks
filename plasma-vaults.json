@@ -1195,6 +1195,21 @@
       "apps": [
         "wgenie"
       ]
+    },
+    {
+      "name": "WalletGenie Treasury",
+      "address": "0x3c13BDd505DE69bB0DF0a2e68A0Cd93a44beB0b4",
+      "chainId": 5003,
+      "protocol": "WalletGenie",
+      "tags": [
+        "wgenie-cfo",
+        "walletgenie-mantle"
+      ],
+      "startBlock": 39471829,
+      "url": "https://app.walletgenie.io/treasury/mantle-sepolia/0x3c13BDd505DE69bB0DF0a2e68A0Cd93a44beB0b4",
+      "apps": [
+        "wgenie"
+      ]
     }
   ]
 }
