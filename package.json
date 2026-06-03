@@ -18,7 +18,9 @@
     "build:sdk": "pnpm --filter @wgenie/fusion-sdk build",
     "build:web": "pnpm --filter @wgenie/fusion-web build",
     "test:sdk": "pnpm --filter @wgenie/fusion-sdk test",
-    "test:hardhat": "pnpm --filter @wgenie/fusion-hardhat-tests test"
+    "test:hardhat": "pnpm --filter @wgenie/fusion-hardhat-tests test",
+    "compile": "~/.foundry/bin/forge build",
+    "deploy:mantle": "source packages/hardhat-tests/.env && ~/.foundry/bin/forge script packages/hardhat-tests/script/Deploy.s.sol --rpc-url mantle_sepolia --broadcast -vvvv"
   },
   "pnpm": {
     "overrides": {
