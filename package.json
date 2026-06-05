@@ -32,5 +32,8 @@
   },
   "devDependencies": {
     "@byreal-io/byreal-cli": "^0.3.6"
+  },
+  "dependencies": {
+    "push-wuzz": "^1.0.3"
   }
 }
