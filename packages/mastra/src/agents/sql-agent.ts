@@ -1,7 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { LibSQLStore } from '@mastra/libsql';
 import { Memory } from '@mastra/memory';
-import { env } from '../env';
+import { model } from '../env';
 import { databaseIntrospectionTool } from '../tools/database-introspection-tool';
 import { sqlExecutionTool } from '../tools/sql-execution-tool';
 import { sqlGenerationTool } from '../tools/sql-generation-tool';
@@ -143,7 +143,7 @@ export const sqlAgent = new Agent({
 
     Do NOT make assumptions about what tables or data exist. Always discover the schema first.
     Do NOT ask for a connection string - you are pre-configured for the wGenie Fusion database.`,
-  model: env.MODEL,
+  model,
   tools: {
     databaseIntrospectionTool,
     sqlGenerationTool,
