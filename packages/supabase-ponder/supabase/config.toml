@@ -124,8 +124,12 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-[auth.web3.ethereum]
-enabled = true
+[auth.web3]
+# SIWE (Sign-In with Ethereum) — enabled for Web3 wallet authentication
+# ethereum is enabled by default when [auth.web3] is present
+# See: https://supabase.com/docs/guides/auth/auth-web3
+# [auth.web3.solana]
+# enabled = false
 
 [edge_runtime]
 # Disabled - All backend logic runs via Ponder/Node.js, not Edge Functions
