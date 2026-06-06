@@ -2,6 +2,11 @@
 
 ## Essential Commands
 
+### Installation
+```bash
+pnpm install
+```
+
 ### Database (Supabase)
 ```bash
 # Start local Supabase (required for Ponder)
@@ -34,16 +39,22 @@ pnpm --filter @wgenie/fusion-supabase-ponder gen:types
 ### Smart Contracts (Foundry)
 ```bash
 # Compile contracts
-~/.foundry/bin/forge build
+pnpm compile
 
 # Deploy to Mantle Sepolia
 pnpm deploy:mantle
 
-# Cast (read contract)
-~/.foundry/bin/forge script packages/hardhat-tests/script/Deploy.s.sol --rpc-url mantle_sepolia --broadcast -vvvv
-
 # Interact with deployed contract
-source packages/hardhat-tests/.env && ~/.foundry/bin/cast call <address> "owner()(address)" --rpc-url $RPC_URL_MANTLE_SEPOLIA
+source packages/hardhat-tests/.env && ~/.foundry/bin/forge call <address> "owner()(address)" --rpc-url $RPC_URL_MANTLE_SEPOLIA
+```
+
+### Testing
+```bash
+# SDK tests
+pnpm test:sdk
+
+# Hardhat tests
+pnpm test:hardhat
 ```
 
 ## Project Structure
@@ -61,15 +72,6 @@ source packages/hardhat-tests/.env && ~/.foundry/bin/cast call <address> "owner(
 2. **Ponder auto-migrates**: Schema changes in `ponder.schema.ts` apply automatically on restart
 3. **Environment setup**: Copy `.env.example` to `.env.local`/`.env` in each package
 4. **Monorepo commands**: Use `pnpm --filter <package> <script>` for package-specific operations
-
-## Testing
-```bash
-# SDK tests
-pnpm test:sdk
-
-# Hardhat tests
-pnpm test:hardhat
-```
 
 ## Important Notes
 - Docker required for Supabase CLI
