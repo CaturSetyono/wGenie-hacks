@@ -1,7 +1,8 @@
 import { createConfig } from 'ponder';
 import { erc4626ABI } from './abis/erc4626ABI';
-import { arbitrum, base, mainnet, mantle, plasma, unichain } from 'viem/chains';
-import { getChainStartBlock, getChainVaults } from './src/contracts';
+import { treasuryABI } from './abis/treasuryABI';
+import { arbitrum, base, mainnet, mantle, mantleSepoliaTestnet, plasma, unichain } from 'viem/chains';
+import { getChainStartBlock, getChainVaults, getTreasuryAddresses, getTreasuryStartBlock } from './src/contracts';
 
 export default createConfig({
   database: {
@@ -33,6 +34,10 @@ export default createConfig({
       id: mantle.id,
       rpc: process.env.PONDER_RPC_URL_MANTLE,
     },
+    mantle_sepolia: {
+      id: mantleSepoliaTestnet.id,
+      rpc: process.env.PONDER_RPC_URL_MANTLE_SEPOLIA,
+    },
   },
   contracts: {
     ERC4626: {
@@ -61,6 +66,15 @@ export default createConfig({
         mantle: {
           address: getChainVaults(mantle.id).map((vault) => vault.address),
           startBlock: getChainStartBlock(mantle.id),
+        },
+      },
+    },
+    WalletGenieTreasury: {
+      abi: treasuryABI,
+      chain: {
+        mantle_sepolia: {
+          address: getTreasuryAddresses(mantleSepoliaTestnet.id),
+          startBlock: getTreasuryStartBlock(mantleSepoliaTestnet.id),
         },
       },
     },
