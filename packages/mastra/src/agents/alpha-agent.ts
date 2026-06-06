@@ -1,7 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { z } from 'zod';
-import { env } from '../env';
+import { model } from '../env';
 import { createStorage } from '../storage';
 import {
   readVaultBalancesTool,
@@ -125,7 +125,7 @@ When removing actions, provide the complete updated array WITHOUT the removed it
 Simulation is automatic — every time you create an action, the tool simulates ALL pending actions on an Anvil fork and returns a before/after balance comparison in the Transaction Proposal card.
 
 If the simulation failed, explain the error and suggest fixes (e.g., insufficient collateral for borrowing, wrong token address, etc.).`,
-  model: env.MODEL,
+  model,
   tools: {
     readVaultBalancesTool,
     createAaveV3ActionTool,
