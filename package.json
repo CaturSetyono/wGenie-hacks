@@ -12,7 +12,6 @@
     "db:status": "cd packages/supabase-ponder && supabase status",
     "dev:web": "pnpm --filter @wgenie/fusion-web dev",
     "dev:web:fusion": "NEXT_PUBLIC_APP_CONFIG=fusion pnpm --filter @wgenie/fusion-web dev",
-
     "dev:ponder": "pnpm --filter @wgenie/fusion-ponder dev",
     "dev:mastra": "pnpm --filter @wgenie/fusion-mastra dev",
     "build:sdk": "pnpm --filter @wgenie/fusion-sdk build",
@@ -31,5 +30,7 @@
       "sharp"
     ]
   },
-  "dependencies": {}
+  "devDependencies": {
+    "@byreal-io/byreal-cli": "^0.3.6"
+  }
 }
