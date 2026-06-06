@@ -1,7 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { LibSQLStore } from '@mastra/libsql';
 import { Memory } from '@mastra/memory';
-import { env } from '../env';
+import { model } from '../env';
 import {
   listVaultsTool,
   getVaultInfoTool,
@@ -145,7 +145,7 @@ Plasma Vaults are ERC-4626 compliant smart contract vaults that:
 - RPC calls may fail if chain RPC URL is not configured
 - Fuse data is from static metadata; vault fuses are from on-chain
 - Protocol READMEs available for: aave_v2, aave_v3, async_action, balancer, ebisu, enso, liquity, stake_dao_v2, yield_basis`,
-  model: env.MODEL,
+  model,
   tools: {
     // Vault tools
     listVaultsTool,
