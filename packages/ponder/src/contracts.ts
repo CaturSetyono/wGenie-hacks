@@ -51,3 +51,21 @@ export const getChainStartBlock = (chainId: ChainId) => {
   const startBlocks = vaults.map((vault) => vault.startBlock);
   return Math.min(...startBlocks);
 };
+
+const WALLETGENIE_TREASURIES = ERC4626_VAULTS.filter((vault) =>
+  vault.tags.includes('walletgenie-mantle'),
+);
+
+export const getTreasuryAddresses = (chainId: number) => {
+  return WALLETGENIE_TREASURIES.filter((t) => t.chainId === chainId).map(
+    (t) => t.address,
+  );
+};
+
+export const getTreasuryStartBlock = (chainId: number) => {
+  const treasuries = WALLETGENIE_TREASURIES.filter(
+    (t) => t.chainId === chainId,
+  );
+  if (treasuries.length === 0) return 0;
+  return Math.min(...treasuries.map((t) => t.startBlock));
+};
