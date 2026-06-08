@@ -373,6 +373,96 @@ export type Database = {
         };
         Relationships: [];
       };
+      treasury_deposit: {
+        Row: {
+          id: string;
+          chain_id: number;
+          treasury_address: string;
+          user: string;
+          amount: string;
+          timestamp: number;
+          transaction_hash: string;
+        };
+        Insert: {
+          id: string;
+          chain_id: number;
+          treasury_address: string;
+          user: string;
+          amount: string;
+          timestamp: number;
+          transaction_hash: string;
+        };
+        Update: {
+          id?: string;
+          chain_id?: number;
+          treasury_address?: string;
+          user?: string;
+          amount?: string;
+          timestamp?: number;
+          transaction_hash?: string;
+        };
+        Relationships: [];
+      };
+      treasury_execution: {
+        Row: {
+          id: string;
+          chain_id: number;
+          treasury_address: string;
+          target: string;
+          value: string;
+          data: string;
+          timestamp: number;
+          transaction_hash: string;
+        };
+        Insert: {
+          id: string;
+          chain_id: number;
+          treasury_address: string;
+          target: string;
+          value: string;
+          data: string;
+          timestamp: number;
+          transaction_hash: string;
+        };
+        Update: {
+          id?: string;
+          chain_id?: number;
+          treasury_address?: string;
+          target?: string;
+          value?: string;
+          data?: string;
+          timestamp?: number;
+          transaction_hash?: string;
+        };
+        Relationships: [];
+      };
+      treasury_manager: {
+        Row: {
+          id: string;
+          chain_id: number;
+          treasury_address: string;
+          manager: string;
+          timestamp: number;
+          transaction_hash: string;
+        };
+        Insert: {
+          id: string;
+          chain_id: number;
+          treasury_address: string;
+          manager: string;
+          timestamp: number;
+          transaction_hash: string;
+        };
+        Update: {
+          id?: string;
+          chain_id?: number;
+          treasury_address?: string;
+          manager?: string;
+          timestamp?: number;
+          transaction_hash?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
