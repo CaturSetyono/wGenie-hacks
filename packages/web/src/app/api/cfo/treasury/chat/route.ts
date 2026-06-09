@@ -1,65 +1,312 @@
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
+import { createPublicClient, http, formatEther, encodeFunctionData, zeroAddress, erc20Abi, formatUnits, type Address } from 'viem';
+import { mantle, mantleSepoliaTestnet, type Chain } from 'viem/chains';
 import { isAddress } from 'viem';
+import { PlasmaVault, MARKET_ID, substrateToAddress } from '@wgenie/fusion-sdk';
 
-const MASTRA_URL = process.env.MASTRA_SERVER_URL ?? 'http://localhost:4111';
+const SUPPORTED: Record<number, Chain> = { 5000: mantle, 5003: mantleSepoliaTestnet };
+const RPC: Record<number, string | undefined> = { 5000: process.env.MANTLE_RPC_URL, 5003: process.env.MANTLE_SEPOLIA_RPC_URL };
+
+function pc(chainId: number) {
+  const c = SUPPORTED[chainId], r = RPC[chainId];
+  if (!c || !r) throw new Error(`Unsupported chain ${chainId}`);
+  return createPublicClient({ chain: c, transport: http(r) });
+}
+
+const tAbi = [
+  { type: 'function', name: 'balances', inputs: [{ name: '', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'owner', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
+  { type: 'function', name: 'manager', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
+  { type: 'function', name: 'paused', inputs: [], outputs: [{ name: '', type: 'bool' }], stateMutability: 'view' },
+] as const;
+const lrAbi = [
+  { type: 'function', name: 'getWNATIVE', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
+  { type: 'function', name: 'swapExactTokensForTokens', inputs: [
+    { name: 'amountIn', type: 'uint256' }, { name: 'amountOutMin', type: 'uint256' },
+    { name: 'path', type: 'tuple', components: [
+      { name: 'pairBinSteps', type: 'uint256[]' }, { name: 'versions', type: 'uint8[]' }, { name: 'tokenPath', type: 'address[]' },
+    ]}, { name: 'to', type: 'address' }, { name: 'deadline', type: 'uint256' },
+  ], outputs: [{ name: 'amountOut', type: 'uint256' }], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'swapExactNATIVEForTokens', inputs: [
+    { name: 'amountOutMin', type: 'uint256' }, { name: 'path', type: 'tuple', components: [
+      { name: 'pairBinSteps', type: 'uint256[]' }, { name: 'versions', type: 'uint8[]' }, { name: 'tokenPath', type: 'address[]' },
+    ]}, { name: 'to', type: 'address' }, { name: 'deadline', type: 'uint256' },
+  ], outputs: [{ name: 'amountOut', type: 'uint256' }], stateMutability: 'payable' },
+] as const;
+const aaAbi = [
+  { inputs: [{ name: 'asset', type: 'address' }, { name: 'amount', type: 'uint256' }, { name: 'onBehalfOf', type: 'address' }, { name: 'referralCode', type: 'uint16' }], name: 'supply', outputs: [], stateMutability: 'nonpayable', type: 'function' },
+  { inputs: [{ name: 'asset', type: 'address' }, { name: 'amount', type: 'uint256' }, { name: 'to', type: 'address' }], name: 'withdraw', outputs: [{ name: '', type: 'uint256' }], stateMutability: 'nonpayable', type: 'function' },
+] as const;
+const e4626 = [
+  { type: 'function', name: 'asset', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
+  { type: 'function', name: 'convertToAssets', inputs: [{ name: 'shares', type: 'uint256' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+] as const;
+const pAbi = [
+  { type: 'function', name: 'getAssetPrice', inputs: [{ name: 'asset_', type: 'address' }], outputs: [{ name: '', type: 'uint256' }, { name: '', type: 'uint256' }], stateMutability: 'view' },
+] as const;
+
+const tools: Record<string, { description: string; parameters: z.ZodObject<any>; handler: (args: any) => Promise<any> }> = {
+  readWalletGenieTreasury: {
+    description: 'Read treasury MNT balance, owner, manager, user deposit.',
+    parameters: z.object({ vaultAddress: z.string(), chainId: z.number(), callerAddress: z.string().optional() }),
+    handler: async (args: any) => {
+      const c = pc(args.chainId), a = args.vaultAddress as Address;
+      const [bal, owner, mgr, paused] = await Promise.all([
+        c.getBalance({ address: a }), c.readContract({ address: a, abi: tAbi, functionName: 'owner' }),
+        c.readContract({ address: a, abi: tAbi, functionName: 'manager' }), c.readContract({ address: a, abi: tAbi, functionName: 'paused' }),
+      ]);
+      let ub = 0n;
+      if (args.callerAddress) ub = (await c.readContract({ address: a, abi: tAbi, functionName: 'balances', args: [args.callerAddress as Address] })) as unknown as bigint;
+      return { type: 'treasury-balance', success: true, data: { treasuryMnt: bal.toString(), treasuryMntFormatted: formatEther(bal), callerBalance: ub.toString(), callerBalanceFormatted: formatEther(ub), owner, manager: mgr, paused } };
+    },
+  },
+  readTreasuryBalances: {
+    description: 'Read token balances with USD values in a treasury vault.',
+    parameters: z.object({ vaultAddress: z.string(), chainId: z.number() }),
+    handler: async (args: any) => {
+      const c = pc(args.chainId), a = args.vaultAddress as Address;
+      const pv = await PlasmaVault.create(c, a); let tv = 0;
+      const ua = await c.readContract({ address: a, abi: e4626, functionName: 'asset' }) as Address;
+      let addrs: Address[] = [ua];
+      try { const s = await pv.getMarketSubstrates(MARKET_ID.ERC20_VAULT_BALANCE); const as = s.map(x => substrateToAddress(x)).filter((x): x is Address => !!x); const set = new Set(addrs.map(x => x.toLowerCase())); for (const x of as) { if (!set.has(x.toLowerCase())) { addrs.push(x); set.add(x.toLowerCase()); } } } catch {}
+      const m = await c.multicall({ contracts: addrs.flatMap(x => [
+        { address: x, abi: erc20Abi, functionName: 'name' }, { address: x, abi: erc20Abi, functionName: 'symbol' },
+        { address: x, abi: erc20Abi, functionName: 'decimals' }, { address: x, abi: erc20Abi, functionName: 'balanceOf', args: [a] },
+      ]), allowFailure: true });
+      const pr = await c.multicall({ contracts: addrs.map(x => ({ address: pv.priceOracle, abi: pAbi, functionName: 'getAssetPrice', args: [x] })), allowFailure: true });
+      const assets = addrs.map((x, i) => {
+        const n = m[i*4], s = m[i*4+1], d = m[i*4+2], b = m[i*4+3], p = pr[i];
+        const name = n.status === 'success' ? String(n.result) : x, symbol = s.status === 'success' ? String(s.result) : '???';
+        const dec = d.status === 'success' ? Number(d.result) : 18, bal = b.status === 'success' ? BigInt(b.result as string) : 0n;
+        const bf = formatUnits(bal, dec); let pu = '0.00', vu = '0.00';
+        if (p.status === 'success') { const [rp, rpd] = p.result as [bigint, bigint]; const pd = Number(rpd); const pf = Number(rp) / 10**pd; pu = pf.toFixed(2); if (bal > 0n && rp > 0n) { const vf = Number(bal * rp) / 10**(dec + pd); vu = vf.toFixed(2); tv += vf; } }
+        return { address: x, name, symbol, decimals: dec, balance: bal.toString(), balanceFormatted: bf, priceUsd: pu, valueUsd: vu };
+      }).filter(x => BigInt(x.balance) > 0n);
+      return { type: 'balance-check', success: true, assets, totalValueUsd: tv.toFixed(2) };
+    },
+  },
+  createMerchantMoeSwapAction: {
+    description: 'Create Merchant Moe swap proposal.',
+    parameters: z.object({ vaultAddress: z.string(), chainId: z.number().default(5000), tokenIn: z.string(), tokenOut: z.string(), amountIn: z.string(), amountOutMin: z.string().default('0'), pairBinStep: z.number().default(10), version: z.string().default('V2_1'), useNativeInput: z.boolean().default(false), isReady: z.boolean().default(true) }),
+    handler: async (args: any) => {
+      const c = pc(args.chainId ?? 5000), router = '0x013e138EF6008ae5FDFDE29700e3f2Bc61d21E3a' as Address;
+      const dl = BigInt(Math.floor(Date.now() / 1000) + 1200), ni = args.useNativeInput || args.tokenIn === zeroAddress;
+      const wn = await c.readContract({ address: router, abi: lrAbi, functionName: 'getWNATIVE' }) as Address;
+      const tp = ni ? [wn as Address, args.tokenOut as Address] : [args.tokenIn as Address, args.tokenOut as Address];
+      const path = { pairBinSteps: [BigInt(args.pairBinStep ?? 10)], versions: [({ V1: 0, V2: 1, V2_1: 2 } as any)[args.version ?? 'V2_1']], tokenPath: tp };
+      const fn = ni ? 'swapExactNATIVEForTokens' : 'swapExactTokensForTokens';
+      const data = encodeFunctionData({ abi: lrAbi, functionName: fn, args: ni ? [BigInt(args.amountOutMin ?? 0), path, args.vaultAddress as Address, dl] : [BigInt(args.amountIn), BigInt(args.amountOutMin ?? 0), path, args.vaultAddress as Address, dl] });
+      const desc = ni ? `Merchant Moe swap ${args.amountIn} MNT for ${args.tokenOut.slice(0,10)}...` : `Swap ${args.amountIn} ${args.tokenIn.slice(0,10)}... -> ${args.tokenOut.slice(0,10)}...`;
+      return { type: 'treasury-transaction-proposal', status: args.isReady ? 'ready' : 'partial', actions: [{ id: '1', protocol: 'merchant-moe', actionType: 'swap', description: desc, target: router, value: ni ? args.amountIn : '0', data }], newAction: { success: true, protocol: 'merchant-moe', actionType: 'swap', description: desc }, vaultAddress: args.vaultAddress, chainId: args.chainId, execution: { kind: 'treasury-execution', target: router, value: ni ? args.amountIn : '0', data, protocol: 'merchant-moe' }, actionsCount: 1, actionsSummary: desc };
+    },
+  },
+  createAaveAllocationAction: {
+    description: 'Create Aave V3 supply proposal.',
+    parameters: z.object({ vaultAddress: z.string(), chainId: z.number().default(5003), asset: z.string(), amount: z.string(), isReady: z.boolean().default(true) }),
+    handler: async (args: any) => {
+      const pool = '0xCF69666666666666666666666666666666666666' as Address;
+      const data = encodeFunctionData({ abi: aaAbi, functionName: 'supply', args: [args.asset as Address, BigInt(args.amount), args.vaultAddress as Address, 0] });
+      const desc = `Aave V3 supply ${args.amount} ${args.asset.slice(0,10)}...`;
+      return { type: 'treasury-transaction-proposal', status: args.isReady ? 'ready' : 'partial', actions: [{ id: '1', protocol: 'aave-v3', actionType: 'supply', description: desc, target: pool, value: '0', data }], newAction: { success: true, protocol: 'aave-v3', actionType: 'supply', description: desc }, vaultAddress: args.vaultAddress, chainId: args.chainId, execution: { kind: 'treasury-execution', target: pool, value: '0', data, protocol: 'aave-v3' }, actionsCount: 1, actionsSummary: desc };
+    },
+  },
+  createAaveWithdrawAction: {
+    description: 'Create Aave V3 withdraw proposal.',
+    parameters: z.object({ vaultAddress: z.string(), chainId: z.number().default(5003), asset: z.string(), amount: z.string(), isReady: z.boolean().default(true) }),
+    handler: async (args: any) => {
+      const pool = '0xCF69666666666666666666666666666666666666' as Address;
+      const to = (args.recipient ?? args.vaultAddress) as Address;
+      const data = encodeFunctionData({ abi: aaAbi, functionName: 'withdraw', args: [args.asset as Address, BigInt(args.amount), to] });
+      const desc = `Aave V3 withdraw ${args.amount} ${args.asset.slice(0,10)}...`;
+      return { type: 'treasury-transaction-proposal', status: args.isReady ? 'ready' : 'partial', actions: [{ id: '1', protocol: 'aave-v3', actionType: 'withdraw', description: desc, target: pool, value: '0', data }], newAction: { success: true, protocol: 'aave-v3', actionType: 'withdraw', description: desc }, vaultAddress: args.vaultAddress, chainId: args.chainId, execution: { kind: 'treasury-execution', target: pool, value: '0', data, protocol: 'aave-v3' }, actionsCount: 1, actionsSummary: desc };
+    },
+  },
+};
+
+const SYSTEM_PROMPT = `You are WalletGenie, a personal Web3 CFO AI agent on Mantle.
+You help users analyze wallets, optimize yield, and execute DeFi strategies via natural language.
+
+## TONE & STYLE
+Professional, concise CFO tone. Use plain language. Be direct.
+
+## CAPABILITIES
+- readWalletGenieTreasury: Check treasury MNT balance, owner, manager, deposits.
+- readTreasuryBalances: Check ERC-20 token balances with USD values.
+- createMerchantMoeSwapAction: Propose a swap through treasury execute().
+- createAaveAllocationAction: Propose Aave V3 supply.
+- createAaveWithdrawAction: Propose Aave V3 withdraw.
+
+## WORKFLOW
+1. User asks about treasury → readWalletGenieTreasury.
+2. User wants yield → propose supply/withdraw.
+3. User wants swap → createMerchantMoeSwapAction.
+4. Always return structured proposals for actions.
+5. You cannot execute transactions directly - only propose.`;
+
+function buildToolDefs() {
+  return Object.entries(tools).map(([name, t]) => {
+    const shape = t.parameters.shape;
+    const props: Record<string, any> = {};
+    const required: string[] = [];
+    for (const [k, v] of Object.entries(shape)) {
+      let inner = v;
+      let optional = false;
+      if (inner instanceof z.ZodDefault) { const d = inner as z.ZodDefault<any>; inner = d._def.innerType; optional = true; }
+      if (inner instanceof z.ZodOptional) { optional = true; inner = (inner as z.ZodOptional<any>).unwrap(); }
+      let type = 'string';
+      if (inner instanceof z.ZodNumber) type = 'number';
+      else if (inner instanceof z.ZodBoolean) type = 'boolean';
+      props[k] = { type, description: k };
+      if (!optional) required.push(k);
+    }
+    return {
+      type: 'function',
+      function: { name, description: t.description, parameters: { type: 'object', properties: props, required } },
+    };
+  });
+}
+
+function getNextId() {
+  let i = 0;
+  return () => `chunk_${++i}`;
+}
+
+function sse(data: any) {
+  return `data: ${JSON.stringify(data)}\n\n`;
+}
 
 export async function POST(request: NextRequest) {
-  const { messages, callerAddress, vaultAddress, chainId, sessionId } = await request.json();
+  const { messages, callerAddress, vaultAddress, chainId } = await request.json();
+  const ctx = callerAddress && isAddress(callerAddress, { strict: false }) ? `User: ${callerAddress}.` : '';
+  const vctx = vaultAddress && isAddress(vaultAddress, { strict: false }) ? `Treasury: ${vaultAddress} on chain ${chainId ?? 5003}.` : '';
+  const sys = `${SYSTEM_PROMPT}\n\nCONTEXT: ${ctx} ${vctx}`;
 
-  const callerContext =
-    callerAddress && isAddress(callerAddress, { strict: false })
-      ? ` The user's connected wallet (callerAddress for simulation) is ${callerAddress}.`
-      : '';
-  const vaultContext =
-    vaultAddress && isAddress(vaultAddress, { strict: false })
-      ? ` The user's treasury vault address is ${vaultAddress} on chainId ${chainId}.`
-      : ' The user has not created a treasury vault yet.';
-  const system = `CURRENT CONTEXT:${callerContext}${vaultContext} Chain: ${chainId ?? 5003} (Mantle Sepolia).`;
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const nextId = getNextId();
+      let nvidiaMsgs = [{ role: 'system', content: sys }, ...messages.map((m: any) => ({ role: m.role, content: m.content }))];
+      let maxLoops = 10;
 
-  // Include sessionId so each page refresh gets a fresh thread (no stale memory)
-  const sessionSuffix = sessionId ? `-${sessionId}` : '';
-  const threadId = callerAddress
-    ? `wgenie-cfo-${callerAddress.toLowerCase()}${sessionSuffix}`
-    : `wgenie-cfo-anonymous${sessionSuffix}`;
+      while (maxLoops-- > 0) {
+        const body: any = {
+          model: 'meta/llama-3.3-70b-instruct',
+          messages: nvidiaMsgs,
+          max_tokens: 2048,
+          stream: true,
+        };
+        const toolDefs = buildToolDefs();
+        if (toolDefs.length > 0) body.tools = toolDefs;
 
-  const augmentedMessages = [
-    { role: 'system', content: system },
-    ...messages,
-  ];
+        const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.NVIDIA_API_KEY}`,
+          },
+          body: JSON.stringify(body),
+        });
 
-  try {
-    const upstream = await fetch(`${MASTRA_URL}/chat/wgenieCfoAgent`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': process.env.MASTRA_API_KEY ?? '',
-      },
-      body: JSON.stringify({
-        messages: augmentedMessages,
-        maxSteps: 10,
-        memory: { thread: threadId, resource: threadId },
-      }),
-      signal: request.signal,
-    });
+        if (!res.ok) {
+          const errText = await res.text();
+          controller.enqueue(encoder.encode(sse({ type: 'error', errorText: `NVIDIA API error: ${res.status} ${errText}` })));
+          break;
+        }
 
-    if (!upstream.ok) {
-      const errorText = await upstream.text().catch(() => 'Unknown error');
-      console.error('Mastra server error:', upstream.status, errorText);
-      return new Response('Agent server error', { status: upstream.status });
-    }
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullContent = '';
+        const collectedCalls: any[] = [];
+        let textId = '';
 
-    return new Response(upstream.body, {
-      headers: {
-        'Content-Type':
-          upstream.headers.get('Content-Type') ?? 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'X-Accel-Buffering': 'no',
-      },
-    });
-  } catch (error) {
-    console.error('Error proxying to Mastra', error);
-    return new Response('An error occurred while processing your request.', {
-      status: 500,
-    });
-  }
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let newlineIdx;
+          while ((newlineIdx = buffer.indexOf('\n')) >= 0) {
+            const line = buffer.slice(0, newlineIdx).trimEnd();
+            buffer = buffer.slice(newlineIdx + 1);
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') continue;
+            try {
+              const chunk = JSON.parse(data);
+              const delta = chunk.choices?.[0]?.delta;
+              if (delta?.content) {
+                if (!textId) { textId = nextId(); controller.enqueue(encoder.encode(sse({ type: 'text-start', id: textId }))); }
+                fullContent += delta.content;
+                controller.enqueue(encoder.encode(sse({ type: 'text-delta', id: textId, delta: delta.content })));
+              }
+              if (delta?.tool_calls) {
+                for (const tc of delta.tool_calls) {
+                  let existing = collectedCalls.find((x: any) => x.index === tc.index);
+                  if (!existing) {
+                    existing = { index: tc.index, id: tc.id || `call_${collectedCalls.length}`, type: 'function', function: { name: '', arguments: '' } };
+                    collectedCalls.push(existing);
+                  }
+                  if (tc.function?.name) existing.function.name += tc.function.name;
+                  if (tc.function?.arguments) existing.function.arguments += tc.function.arguments;
+                }
+              }
+            } catch {}
+          }
+        }
+
+        if (textId) controller.enqueue(encoder.encode(sse({ type: 'text-end', id: textId })));
+
+        const toolCalls = collectedCalls.filter((tc: any) => tc.function.name);
+        if (toolCalls.length === 0) {
+          controller.enqueue(encoder.encode(sse({ type: 'finish', finishReason: 'stop', usage: {} })));
+          break;
+        }
+
+        const toolCallEntry: any = { role: 'assistant', content: fullContent || null, tool_calls: [] };
+        for (const tc of toolCalls) {
+          toolCallEntry.tool_calls.push({
+            id: tc.id, type: 'function', function: { name: tc.function.name, arguments: tc.function.arguments },
+          });
+        }
+        nvidiaMsgs.push(toolCallEntry);
+
+        for (const tc of toolCalls) {
+          const toolImpl = tools[tc.function.name];
+          const callId = tc.id;
+          const argsText = tc.function.arguments;
+
+          controller.enqueue(encoder.encode(sse({
+            type: 'tool-input-start', toolCallId: callId, toolName: tc.function.name,
+          })));
+
+          let args: any = {};
+          try { args = JSON.parse(argsText); } catch {}
+
+          controller.enqueue(encoder.encode(sse({
+            type: 'tool-input-available', toolCallId: callId, toolName: tc.function.name, input: args,
+          })));
+
+          let result: any;
+          try { result = await toolImpl.handler(args); } catch (e: any) { result = { error: String(e) }; }
+
+          controller.enqueue(encoder.encode(sse({
+            type: 'tool-result', toolCallId: callId, toolName: tc.function.name, result,
+          })));
+
+          nvidiaMsgs.push({ role: 'tool', tool_call_id: callId, content: JSON.stringify(result) });
+        }
+      }
+
+      if (maxLoops <= 0) {
+        controller.enqueue(encoder.encode(sse({ type: 'finish', finishReason: 'stop', usage: {} })));
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+  });
 }
