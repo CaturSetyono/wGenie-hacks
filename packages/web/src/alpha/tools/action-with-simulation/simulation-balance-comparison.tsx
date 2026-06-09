@@ -3,7 +3,7 @@
 import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { TokenIcon } from '@/components/token-icon/token-icon';
 import { ProtocolIcon, getProtocolLabel } from '@/components/protocol-icon/protocol-icon';
-import type { BalanceSnapshot } from '@wgenie/fusion-mastra/alpha-types';
+import type { BalanceSnapshot } from '@/lib/types/alpha';
 import type { Address } from 'viem';
 
 type Asset = BalanceSnapshot['assets'][number];
