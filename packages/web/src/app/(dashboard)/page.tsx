@@ -6,13 +6,13 @@ import { DashboardFlowChart } from '@/dashboard/dashboard-flow-chart';
 import { DashboardVaultRankings } from '@/dashboard/components/dashboard-vault-rankings';
 import { DashboardLargestTransactions } from '@/dashboard/components/dashboard-largest-transactions';
 import { DashboardTopDepositors } from '@/dashboard/components/dashboard-top-depositors';
-import { YoLandingPage } from '@/wgenie-cfo/components/landing-page';
+import { WalletGenieLandingPage } from '@/wgenie-cfo/components/landing-page';
 
 export default async function DashboardPage() {
   const config = getAppConfig();
 
   if (config.id === 'wgenie') {
-    return <YoLandingPage />;
+    return <WalletGenieLandingPage />;
   }
 
   const [metrics, rankings] = await Promise.all([
