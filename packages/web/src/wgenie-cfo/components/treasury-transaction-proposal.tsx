@@ -23,7 +23,7 @@ import type { Address, Hex } from 'viem';
 import { mantle, mantleSepoliaTestnet } from 'viem/chains';
 import { TxHashLink } from '@/activity/components/tx-hash-link';
 import { cn } from '@/lib/utils';
-import type { TreasuryTransactionProposalOutput } from '@wgenie/fusion-mastra/wgenie-cfo-types';
+import type { TreasuryTransactionProposalOutput } from '@/lib/types/wgenie-cfo';
 
 const CHAIN_NAMES: Record<number, string> = {
   [mantle.id]: 'Mantle',
