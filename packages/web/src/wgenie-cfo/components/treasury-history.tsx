@@ -1,7 +1,7 @@
 import { useTreasuryHistory, type TreasuryActivity } from '../hooks/use-treasury-history';
 import { formatDistanceToNow } from 'date-fns';
 import { ExternalLink, ArrowDownCircle, Zap, UserCheck } from 'lucide-react';
-import { formatUnits } from 'viem';
+import { formatUnits, type Address } from 'viem';
 import { getExplorerTxUrl } from '@/lib/get-explorer-tx-url';
 import { truncateHex } from '@/lib/truncate-hex';
 
@@ -87,7 +87,7 @@ function ActivityItem({ item, chainId }: { item: TreasuryActivity; chainId: numb
       </div>
       
       <a
-        href={getExplorerTxUrl(chainId, item.transactionHash)}
+        href={getExplorerTxUrl(item.transactionHash as Address, chainId)}
         target="_blank"
         rel="noopener noreferrer"
         className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-white/5 text-wgenie-muted hover:text-white"
