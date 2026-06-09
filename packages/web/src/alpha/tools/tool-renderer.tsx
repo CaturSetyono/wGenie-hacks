@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { TransactionProposal } from './transaction-proposal/transaction-proposal';
 import type { ToolPartProps } from '../agent-chat';
-import type { TransactionProposalOutput } from '@wgenie/fusion-mastra/alpha-types';
+import type { TransactionProposalOutput } from '@/lib/types/alpha';
 
 export function ToolRenderer({ state, output, chainId }: ToolPartProps) {
   if (state === 'input-available' || state === 'input-streaming') {
