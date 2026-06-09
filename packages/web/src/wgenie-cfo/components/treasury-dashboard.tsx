@@ -52,7 +52,7 @@ export function TreasuryDashboard({ chainId, vaultAddress }: Props) {
           <AllocationTable
             chainId={chainId}
             positions={positions}
-            vaultsData={vaultsData}
+            vaultsData={vaultsData ? Object.values(vaultsData) : undefined}
             prices={prices ?? {}}
             isLoading={isPositionsLoading || isVaultsLoading}
           />
