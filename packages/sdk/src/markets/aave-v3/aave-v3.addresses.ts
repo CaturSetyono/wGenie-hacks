@@ -1,10 +1,11 @@
-import { mainnet, arbitrum, base, plasma, avalanche } from 'viem/chains';
+import { mainnet, arbitrum, base, mantle, plasma, avalanche } from 'viem/chains';
 import { createChainAddresses } from '../../utils/create-chain-addresses';
 
 export const AAVE_V3_POOL_ADDRESSES_PROVIDER = createChainAddresses({
   [mainnet.id]: '0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e',
   [arbitrum.id]: '0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb',
   [base.id]: '0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D',
+  [mantle.id]: '0xba50Cd2A20f6DA35D788639E581bca8d0B5d4D5f',
   [plasma.id]: '0x061D8e131F26512348ee5FA42e2DF1bA9d6505E9',
   [avalanche.id]: '0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb',
 });
