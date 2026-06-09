@@ -1,7 +1,8 @@
 # Aave V3 Mantle Reference
 
-## Addresses (Mantle Sepolia 5003)
-- **Pool**: `0xCF69666666666666666666666666666666666666`
+## Addresses (Mantle Mainnet 5000)
+- **Pool**: `0x458F293454fE0d67EC0655f3672301301DD51422`
+- **Pool Addresses Provider**: `0xba50Cd2A20f6DA35D788639E581bca8d0B5d4D5f`
 
 ## Common Functions
 
