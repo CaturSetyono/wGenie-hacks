@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { execSync } from 'child_process';
 import { createPublicClient, http, formatEther, encodeFunctionData, zeroAddress, erc20Abi, formatUnits, type Address } from 'viem';
 import { mantle, mantleSepoliaTestnet, type Chain } from 'viem/chains';
 import { isAddress } from 'viem';
@@ -45,6 +46,8 @@ const e4626 = [
 const pAbi = [
   { type: 'function', name: 'getAssetPrice', inputs: [{ name: 'asset_', type: 'address' }], outputs: [{ name: '', type: 'uint256' }, { name: '', type: 'uint256' }], stateMutability: 'view' },
 ] as const;
+
+const AAVE_POOL: Record<number, Address> = { 5000: '0x458F293454fE0d67EC0655f3672301301DD51422', 5003: '0x458F293454fE0d67EC0655f3672301301DD51422' };
 
 const tools: Record<string, { description: string; parameters: z.ZodObject<any>; handler: (args: any) => Promise<any> }> = {
   readWalletGenieTreasury: {
@@ -105,7 +108,7 @@ const tools: Record<string, { description: string; parameters: z.ZodObject<any>;
     description: 'Create Aave V3 supply proposal.',
     parameters: z.object({ vaultAddress: z.string(), chainId: z.number().default(5003), asset: z.string(), amount: z.string(), isReady: z.boolean().default(true) }),
     handler: async (args: any) => {
-      const pool = '0xCF69666666666666666666666666666666666666' as Address;
+      const pool = AAVE_POOL[args.chainId ?? 5003] ?? '0x458F293454fE0d67EC0655f3672301301DD51422';
       const data = encodeFunctionData({ abi: aaAbi, functionName: 'supply', args: [args.asset as Address, BigInt(args.amount), args.vaultAddress as Address, 0] });
       const desc = `Aave V3 supply ${args.amount} ${args.asset.slice(0,10)}...`;
       return { type: 'treasury-transaction-proposal', status: args.isReady ? 'ready' : 'partial', actions: [{ id: '1', protocol: 'aave-v3', actionType: 'supply', description: desc, target: pool, value: '0', data }], newAction: { success: true, protocol: 'aave-v3', actionType: 'supply', description: desc }, vaultAddress: args.vaultAddress, chainId: args.chainId, execution: { kind: 'treasury-execution', target: pool, value: '0', data, protocol: 'aave-v3' }, actionsCount: 1, actionsSummary: desc };
@@ -115,34 +118,91 @@ const tools: Record<string, { description: string; parameters: z.ZodObject<any>;
     description: 'Create Aave V3 withdraw proposal.',
     parameters: z.object({ vaultAddress: z.string(), chainId: z.number().default(5003), asset: z.string(), amount: z.string(), isReady: z.boolean().default(true) }),
     handler: async (args: any) => {
-      const pool = '0xCF69666666666666666666666666666666666666' as Address;
+      const pool = AAVE_POOL[args.chainId ?? 5003] ?? '0x458F293454fE0d67EC0655f3672301301DD51422';
       const to = (args.recipient ?? args.vaultAddress) as Address;
       const data = encodeFunctionData({ abi: aaAbi, functionName: 'withdraw', args: [args.asset as Address, BigInt(args.amount), to] });
       const desc = `Aave V3 withdraw ${args.amount} ${args.asset.slice(0,10)}...`;
       return { type: 'treasury-transaction-proposal', status: args.isReady ? 'ready' : 'partial', actions: [{ id: '1', protocol: 'aave-v3', actionType: 'withdraw', description: desc, target: pool, value: '0', data }], newAction: { success: true, protocol: 'aave-v3', actionType: 'withdraw', description: desc }, vaultAddress: args.vaultAddress, chainId: args.chainId, execution: { kind: 'treasury-execution', target: pool, value: '0', data, protocol: 'aave-v3' }, actionsCount: 1, actionsSummary: desc };
     },
   },
+  getByrealTopPools: {
+    description: 'Get top-performing liquidity pools on Byreal DEX (Solana). Sorted by APR by default. Valid sortField values: apr24h, tvlUsd, volume24hUsd, fee24hUsd, priceChange24h.',
+    parameters: z.object({ sortField: z.string().default('apr24h'), limit: z.number().default(5) }),
+    handler: async (args: any) => {
+      try {
+        const sf = ['apr24h', 'tvlUsd', 'volume24hUsd', 'fee24hUsd', 'priceChange24h'].includes(args.sortField) ? args.sortField : 'apr24h';
+        const lim = Math.min(Math.max(Number(args.limit) || 5, 1), 20);
+        const out = execSync(`byreal-cli pools list --sort-field ${sf} -o json`, { encoding: 'utf-8', timeout: 20000 });
+        const parsed = JSON.parse(out);
+        const pools = (parsed.data?.pools || []).slice(0, lim);
+        return { type: 'byreal-pools', success: true, count: pools.length, pools: pools.map((p: any) => ({ id: p.id, pair: p.pair, apr: (p.total_apr || 0).toFixed(2) + '%', tvlUsd: '$' + (p.tvl_usd || 0).toFixed(0), volume24hUsd: '$' + (p.volume_24h_usd || 0).toFixed(0), tokenA: p.token_a?.symbol, tokenB: p.token_b?.symbol })) };
+      } catch (e: any) { return { type: 'byreal-pools', success: false, error: String(e.message || e) }; }
+    },
+  },
+  analyzeByrealPool: {
+    description: 'Analyze a specific Byreal liquidity pool by address. Returns metrics, price range, volatility analysis.',
+    parameters: z.object({ poolAddress: z.string() }),
+    handler: async (args: any) => {
+      try {
+        const out = execSync(`byreal-cli pools analyze ${args.poolAddress} -o json`, { encoding: 'utf-8', timeout: 15000 });
+        const parsed = JSON.parse(out);
+        return { type: 'byreal-pool-analysis', success: true, ...parsed.data };
+      } catch (e: any) { return { type: 'byreal-pool-analysis', success: false, error: String(e.message || e) }; }
+    },
+  },
+  simulateByrealSwap: {
+    description: 'Simulate a token swap on Byreal DEX (Solana). Dry-run only — no real transaction.',
+    parameters: z.object({ inputMint: z.string(), outputMint: z.string(), amount: z.string() }),
+    handler: async (args: any) => {
+      try {
+        const out = execSync(`byreal-cli swap execute --input-mint ${args.inputMint} --output-mint ${args.outputMint} --amount ${args.amount} --dry-run -o json`, { encoding: 'utf-8', timeout: 20000 });
+        const parsed = JSON.parse(out);
+        return { type: 'byreal-swap-simulation', success: true, data: parsed.data };
+      } catch (e: any) { return { type: 'byreal-swap-simulation', success: false, error: String(e.message || e) }; }
+    },
+  },
+  executeByrealSwap: {
+    description: 'Execute a token swap on Byreal DEX (Solana). Requires byreal-cli wallet setup. For amounts >$1000, user must confirm first.',
+    parameters: z.object({ inputMint: z.string(), outputMint: z.string(), amount: z.string(), confirmed: z.boolean().default(false) }),
+    handler: async (args: any) => {
+      try {
+        if (!args.confirmed) return { type: 'byreal-swap-execution', success: false, error: 'Confirmation required. Set confirmed=true to proceed. For amounts >$1000, please confirm with user first.', needsConfirmation: true };
+        const out = execSync(`byreal-cli swap execute --input-mint ${args.inputMint} --output-mint ${args.outputMint} --amount ${args.amount} --confirm -o json`, { encoding: 'utf-8', timeout: 60000 });
+        const parsed = JSON.parse(out);
+        return { type: 'byreal-swap-execution', success: true, data: parsed.data };
+      } catch (e: any) { return { type: 'byreal-swap-execution', success: false, error: String(e.message || e), needsConfirmation: false }; }
+    },
+  },
 };
 
-const SYSTEM_PROMPT = `You are WalletGenie, a personal Web3 CFO AI agent on Mantle.
-You help users analyze wallets, optimize yield, and execute DeFi strategies via natural language.
+const SYSTEM_PROMPT = `You are WalletGenie, a personal Web3 CFO AI agent for the Turing Test 2026 Hackathon: Track 6 (Agentic Economy - Byreal Toolkit).
+You help users analyze wallets, optimize yield on Mantle L2, and explore cross-chain DeFi strategies via natural language.
 
 ## TONE & STYLE
 Professional, concise CFO tone. Use plain language. Be direct.
 
-## CAPABILITIES
+## CAPABILITIES - Mantle L2 (5003 testnet / 5000 mainnet)
 - readWalletGenieTreasury: Check treasury MNT balance, owner, manager, deposits.
 - readTreasuryBalances: Check ERC-20 token balances with USD values.
-- createMerchantMoeSwapAction: Propose a swap through treasury execute().
+- createMerchantMoeSwapAction: Propose a swap through treasury execute() on Merchant Moe.
 - createAaveAllocationAction: Propose Aave V3 supply.
 - createAaveWithdrawAction: Propose Aave V3 withdraw.
+
+## CAPABILITIES - Byreal (Solana) - Track 6 Requirement
+Byreal is a CLMM DEX on Solana. You can research and trade on it.
+- getByrealTopPools: List top-performing pools by APR/TVL/volume.
+- analyzeByrealPool: Deep-dive analyze a specific pool (range analysis, volatility, fee APR).
+- simulateByrealSwap: Dry-run a swap to preview price impact and output amount.
+- executeByrealSwap: Execute a swap (requires user confirmation for >$1000).
 
 ## WORKFLOW
 1. User asks about treasury → readWalletGenieTreasury.
 2. User wants yield → propose supply/withdraw.
-3. User wants swap → createMerchantMoeSwapAction.
-4. Always return structured proposals for actions.
-5. You cannot execute transactions directly - only propose.`;
+3. User wants swap on Mantle → createMerchantMoeSwapAction.
+4. User wants Byreal research → getByrealTopPools / analyzeByrealPool.
+5. User wants Byreal trade → simulateByrealSwap first, then executeByrealSwap with confirmation.
+6. Always return structured proposals for on-chain actions.
+7. You cannot execute Mantle transactions directly - only propose.`;
 
 function buildToolDefs() {
   return Object.entries(tools).map(([name, t]) => {
