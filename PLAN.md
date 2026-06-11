@@ -1,129 +1,207 @@
-# WalletGenie CFO — Hackathon Execution Plan
+# WalletGenie — Full Plan
 
-## Arsitektur: No More Mastra ✅ (Sudah Dihapus)
-
-**Mastra udah dihapus** (`packages/mastra/`). CFO agent sekarang jalan langsung di **Next.js API route** (`packages/web/src/app/api/cfo/treasury/chat/route.ts`).
-
-### Stack Baru:
-- **LLM**: `@ai-sdk/openai` → NVIDIA API (`meta/llama-3.3-70b-instruct`)
-- **Agent loop**: `ai` SDK `streamText` dengan `maxSteps` (auto tool calling loop)
-- **Tools**: Inline di route handler (no framework abstraction)
-- **Streaming**: `streamText` → `toDataStreamResponse()` (SSE, compatible dengan `useChat` frontend)
-- **Frontend**: Sama, pake `@ai-sdk/react` `useChat` + `DefaultChatTransport`
-
-### Perubahan:
-| Before | After |
-|--------|-------|
-| `packages/mastra/` agent server | API route langsung di web |
-| Mastra gateway routing NVIDIA | `createOpenAI({ baseURL, apiKey, compatibility })` |
-| `@mastra/core/tools` createTool | `ai` SDK `tool({...})` |
-| Proxy via `fetch(MASTRA_URL)` | Langsung `streamText(...)` di handler |
-| `MASTRA_API_KEY` auth | Langsung dari env |
+> The Turing Test 2026 · Track 6: Agentic Economy
+> Deadline: June 15
 
 ---
 
-## Phase 1: Quick Test
+## I. UI Redesign — "Premium CFO Dashboard"
 
-1. **Install + start web**
-   ```bash
-   pnpm install && pnpm dev:web
-   ```
+### Design Direction
+- **Tone**: Dark, premium, financial — bayangkan Bloomberg Terminal meets Apple design
+- **Color**: Mantle gradient (#000→#ffd15c gold accent), glassmorphism cards, subtle glow
+- **Typography**: Inter/Geist mono untuk numbers, sans-serif untuk body
 
-2. **Test agent**
-   ```bash
-   curl -X POST http://localhost:3000/api/cfo/treasury/chat \
-     -H "Content-Type: application/json" \
-     -d '{"messages":[{"role":"user","content":"what is my treasury balance?"}],"chainId":5003,"vaultAddress":"0x3c13BDd505DE69bB0DF0a2e68A0Cd93a44beB0b4","callerAddress":"0x3a8d93D5F52a26689b075A49E67F4f8924BeC84B"}'
-   ```
+### Pages & Components
 
-3. **Buka UI**: `http://localhost:3000` → login wallet → chat
+| Page | What | Priority |
+|------|------|----------|
+| **Dashboard** | Portfolio overview — total value, P&L, APY, risk score. Dominant chart. | P0 |
+| **Treasury** | Token balances with USD, protocol breakdown, history chart | P0 |
+| **Agent Chat** | Full-page embedded chat — kayak ChatGPT tapi dalam app | P0 |
+| **Strategy** | Active strategies, performance tracking, proposal history | P1 |
+| **Settings** | Risk limits, guardrails, relayer config | P1 |
 
----
-
-## Phase 2: Merchant Moe Integration (Mainnet Only)
-
-- Route handler pake `getPublicClient(chainId)` → multicall
-- Swap action udah implementsi di route handler
-- **TODO**: Dapetin Router address yg benar di Mantle mainnet
-
-### Referensi:
-- Merchant Moe docs: https://docs.merchantmoe.com/
-- Sudah ada di route handler: `createMerchantMoeSwapAction` tool
+### Key UI Improvements
+- **Chat jadi full-page** (bukan modal/sidebar) — biar feel-nya professional chat app
+- **Animated transitions** — framer-motion buat page transitions, number counters
+- **Data viz** — recharts stacked area buat portfolio history, donut chart buat allocation
+- **Mobile responsive** — lumayan penting buat judges yang buka dari HP
 
 ---
 
-## Phase 3: Byreal Integration (Solana DEX)
+## II. CFO Agent — From Propose to Execute
 
-Byreal tools udah ada di route handler (getTopPools, analyzePool, simulateSwap, executeSwap).
+### Phase 1: Real Execution (P0 — Before Hackathon)
 
-### TODO:
-- [ ] Setup Solana wallet untuk TX
-- [ ] Test Byreal CLI commands
-- [ ] Tool output → action card di chat
-
----
-
-## Phase 4: UI Polish
-
-### Route handler udah support:
-- ✅ Streaming response (SSE via `toDataStreamResponse()`)
-- ✅ Tool calling loop (maxSteps: 10)
-- ✅ Treasury reads + swap/allocation/withdraw proposals
-- ✅ Byreal tools
-
-### TODO:
-- [ ] Treasury overview card (balance, deposits)
-- [ ] Chat interface sudah ada (pake `AgentChat` component)
-- [ ] Action cards -> Execute button udah ada (`TreasuryTransactionProposal`)
-- [ ] Error handling (model down, TX failed, insufficient balance)
-
----
-
-## Key Files
-
-| Path | Fungsi |
-|------|--------|
-| `packages/web/src/app/api/cfo/treasury/chat/route.ts` | **CFO Agent API route** — model, tools, streaming |
-| `packages/web/src/lib/types/wgenie-cfo.ts` | TreasuryTransactionProposalOutput type |
-| `packages/web/src/lib/types/alpha.ts` | Alpha project types (legacy) |
-| `packages/web/src/wgenie-cfo/components/treasury-transaction-proposal.tsx` | Execute button UI |
-| `packages/web/src/wgenie-cfo/components/treasury-overview.tsx` | Chat + dashboard page |
-| `packages/web/src/alpha/agent-chat.tsx` | Reusable chat component |
-| `packages/web/.env.local` | API keys, RPC URLs |
-
----
-
-## Known Issues / Notes
-
-### Model:
-- `meta/llama-3.3-70b-instruct` — ✅ Working (currently configured)
-- `meta/llama-3.1-70b-instruct` — **BROKEN** (NVIDIA server 500 error)
-- Untuk ganti model: edit model name di route handler
-- LLM provider: NVIDIA (`createOpenAI({ baseURL: 'https://integrate.api.nvidia.com/v1' })`)
-
-### Treasury:
-- Address: `0x3c13BDd505DE69bB0DF0a2e68A0Cd93a44beB0b4` (Mantle Sepolia 5003)
-- Owner: `0x3a8d93D5F52a26689b075A49E67F4f8924BeC84B`
-- Balance: 1 MNT
-
-### Route Handler Notes:
-- Tool execution otomatis via `streamText` — model decide kapan panggil tool, SDK execute + feed hasilnya balik
-- Output tool berupa `treasury-transaction-proposal` (untuk swap/allocation/withdraw) atau `treasury-balance` / `balance-check` (untuk read)
-- Frontend render proposal via `TreasuryToolRenderer` → `TreasuryTransactionProposal` component
-
-### Environment Variables (`.env.local`):
 ```
-NVIDIA_API_KEY=nvapi-...       # Required
-MANTLE_SEPOLIA_RPC_URL=...     # Required
-MANTLE_RPC_URL=...             # For mainnet operations
+User         Agent         Relayer           Treasury       Blockchain
+ │             │              │                  │              │
+ │ "supply     │              │                  │              │
+ │  1000 USDC" │              │                  │              │
+ │────────────>│              │                  │              │
+ │             │──Propose─────│                  │              │
+ │<──Preview───│              │                  │              │
+ │──Confirm───>│              │                  │              │
+ │             │──Execute────>│                  │              │
+ │             │              │──execute(data)──>│              │
+ │             │              │                  │──tx─────────>│
+ │             │              │<──tx hash────────│              │
+ │<──Result────│              │                  │              │
 ```
 
-### Removed:
-- `packages/mastra/` — deleted
-- `@wgenie/fusion-mastra` dep — removed from web
-- `@mastra/core`, `@mastra/ai-sdk` — removed from web
-- `dev:mastra` script — disabled
+#### Backend Relayer Service
+```bash
+packages/relayer/
+├── src/
+│   ├── route.ts          # Next.js API — /api/relayer/execute
+│   ├── wallet.ts         # EOA manager (encrypted key via KMS/env)
+│   └── guard.ts          # Pre-execution checks (limit, whitelist)
+├── .env.local            # RELAYER_PRIVATE_KEY, TREASURY_ADDRESS
+└── ...
+```
 
-### Foundry:
-- Pakai `~/.foundry/bin/forge` untuk smart contract ops
-- `forge` (tanpa path) adalah opencode AI tool — **JANGAN dipake** untuk Foundry commands
+#### On-Chain Guardrails (WalletGenieTreasury v2)
+```solidity
+struct Guardrail {
+    uint256 dailyLimit;       // Max value per day
+    uint256 maxPerTx;         // Max value per transaction
+    uint256 usedToday;        // Tracked internally
+    uint256 lastReset;        // Block.timestamp / 1 days
+    mapping(address => bool) whitelistedTargets; // Only these protocols
+    bool paused;              // Emergency stop
+}
+```
+
+#### Agent Integration
+- Agent generate calldata → `POST /api/relayer/execute` with tx data
+- Relayer checks guardrails → sign + submit tx → return hash
+- Agent stream tx hash + confirmation to chat
+
+### Phase 2: Guardrails UI (P0 — Before Hackathon)
+
+Settings page where user can:
+- Set daily limit (USD)
+- Whitelist protocols (Merchant Moe, Aave, etc.)
+- Set max slippage per protocol
+- Pause/resume relayer
+- View tx history + status
+
+### Phase 3: Monitoring & Alerts (P1 — Stretch)
+
+- Agent monitor Aave APY changes → push notification
+- Agent detect large withdrawals from protocol → warn user
+- Market condition summary — "MNT turun 5% dalam 24 jam, worth to rebalance?"
+
+---
+
+## III. DME (Distinctive Market Edge) — What Makes Us Different
+
+### 1. Cross-Chain Awareness
+Bukan cuma Mantle. Agent bisa: "Treasury kamu $50k di Mantle, tapi ada $10k idle di Solana. Mau Byreal pool di Solana apa tarik ke Mantle?" — user belum tentu butuh, tapi **wow factor** untuk judges.
+
+### 2. Natural Language Strategy Builder
+Bukan "supply 1000 USDC", tapi:
+```
+User: "Bikin strategy: taruh 60% ke Aave USDC, 30% ke Merchant Moe MNT-USDC,
+       10% sisanya biar liquid. Auto-rebalance seminggu sekali."
+Agent: "Oke, ini flow:
+  1. Swap 600 USDC via Merchant Moe → supply Aave
+  2. Swap 300 USDC → MNT → add liquidity Merchant Moe
+  3. Biarin 100 USDC
+
+  Guardrails: max daily $2000, slippage 0.5%.
+  Setuju?"
+```
+Ini **yang bikin beda** — bukan chatbot, tapi CFO yang beneran mikirin portfolio.
+
+### 3. Risk Dashboard
+- **Protocol risk score**: Aave proven vs Byreal baru launch
+- **Concentration risk**: "55% portfolio di 1 pool — high risk"
+- **Impermanent loss estimate**: untuk LP positions
+- **Recommendation**: "Turunkan exposure Merchant Moe dari 60% ke 40%, masukin ke Aave"
+
+---
+
+## IV. Technical Architecture
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    Frontend (Next.js 16)                   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐ │
+│  │Dashboard │  │ Treasury │  │   Chat   │  │Settings  │ │
+│  │  page    │  │   page   │  │   page   │  │   page   │ │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘ │
+│       └──────────────┴─────────────┴──────────────┘       │
+│                         │ useChat                          │
+│                         │ @ai-sdk/react                    │
+└─────────────────────────┼──────────────────────────────────┘
+                          │ POST /api/cfo/treasury/chat
+                          ▼
+┌──────────────────────────────────────────────────────────┐
+│              API Layer (Next.js Route Handler)             │
+│                                                           │
+│  ┌──────────────────┐  ┌─────────────────────────────┐   │
+│  │   CFO Agent       │  │     Relayer                 │   │
+│  │   (chat/route)    │  │     (/api/relayer/execute)  │   │
+│  │                   │  │                             │   │
+│  │  • NVIDIA API     │  │  • Sign tx with EOA        │   │
+│  │  • Tool handler   │  │  • Check guardrails        │   │
+│  │  • SSE stream     │  │  • Submit to RPC           │   │
+│  └──────────────────┘  └──────────┬──────────────────┘   │
+└───────────────────────────────────┼───────────────────────┘
+                                    │ execute()
+                                    ▼
+┌──────────────────────────────────────────────────────────┐
+│              On-Chain (Mantle 5000/5003)                   │
+│                                                           │
+│  ┌────────────────────┐  ┌────────────────────────────┐  │
+│  │ WalletGenie         │  │  Guardrails (v2)           │  │
+│  │ Treasury            │  │                            │  │
+│  │                     │  │  • dailyLimit              │  │
+│  │  • execute()        │  │  • maxPerTx                │  │
+│  │  • deposit()        │  │  • whitelistedTargets      │  │
+│  │  • owner/manager    │  │  • paused                  │  │
+│  └────────────────────┘  └────────────────────────────┘  │
+│                                                           │
+│  ┌────────────┐  ┌────────────┐  ┌──────────────────┐   │
+│  │ Aave V3    │  │Merchant Moe│  │ Ponder Indexer   │   │
+│  │ Pool       │  │ Router     │  │ Events → DB      │   │
+│  └────────────┘  └────────────┘  └──────────────────┘   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## V. File Changes Summary
+
+| Area | Files | What |
+|------|-------|------|
+| **UI** | `packages/web/src/wgenie-cfo/` | Redesign all components — dashboard, treasury page, settings |
+| **UI** | `packages/web/src/alpha/agent-chat.tsx` | Full-page chat redesign |
+| **Route** | `packages/web/src/app/api/cfo/treasury/chat/route.ts` | Add strategy builder prompt, cross-chain awareness |
+| **Relayer** | `packages/web/src/app/api/relayer/execute/route.ts` | NEW — execute endpoint |
+| **Relayer** | `packages/web/src/app/api/relayer/guardrails/route.ts` | NEW — read/update guardrails |
+| **Contract** | `packages/hardhat-tests/contracts/WalletGenieTreasury.sol` | Add guardrails (v2) |
+| **Contract** | `packages/hardhat-tests/script/Deploy.s.sol` | Deploy v2 |
+| **SDK** | `packages/sdk/src/` | Aave/Byreal helpers for agent |
+| **Config** | `packages/web/.env.local` | Add RELAYER_PRIVATE_KEY |
+
+---
+
+## VI. Demo Script (3 minutes)
+
+1. **"WalletGenie, check my treasury"** → Agent read balances, show portfolio overview
+2. **"USDC APY di Aave berapa?"** → Agent fetch Aave rates, show comparison
+3. **"Supply 1000 USDC ke Aave"** → Agent propose → guardrail check → execute → tx confirmed
+4. **"Bikin strategy: 60% Aave USDC, 40% Merchant Moe MNT-USDC"** → Agent build multi-step flow
+5. **"Cek Byreal pool"** → Cross-chain agent research Solana pools
+
+---
+
+## VII. Future (Post-Hackathon)
+
+- Multi-user treasury (DAO)
+- Social recovery (no seed phrase = bank level security)
+- Cross-chain automated rebalancing (LayerZero integration)
+- Mobile app (React Native)
