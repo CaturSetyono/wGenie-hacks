@@ -3,6 +3,7 @@
 import { RefreshCw, Bell, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTreasury } from './treasury-provider';
+import { ConnectWalletButton } from '@/components/sidebar/connect-wallet-button';
 
 export function CfoHeader({ title }: { title: string }) {
   const { refetch, loading } = useTreasury();
@@ -42,10 +43,8 @@ export function CfoHeader({ title }: { title: string }) {
           </button>
         </div>
 
-        {/* Profile */}
-        <div className="flex size-9 items-center justify-center rounded-full border-2 border-[#C5FF4A]/20 bg-[#141414] text-sm font-bold text-[#C5FF4A]">
-          W
-        </div>
+        {/* Wallet connect */}
+        <ConnectWalletButton />
       </div>
     </header>
   );
