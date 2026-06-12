@@ -1,7 +1,12 @@
-import { Plus, RefreshCw, Bell, ChevronDown } from 'lucide-react';
-import { TREASURY } from './mock-data';
+'use client';
+
+import { RefreshCw, Bell, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useTreasury } from './treasury-provider';
 
 export function CfoHeader({ title }: { title: string }) {
+  const { refetch, loading } = useTreasury();
+
   return (
     <header className="flex items-center justify-between border-b border-[#262626] bg-[#0D0D0D] p-6">
       <h1 className="text-2xl font-bold text-white">{title}</h1>
@@ -12,7 +17,7 @@ export function CfoHeader({ title }: { title: string }) {
           <span className="mr-2 flex size-4 items-center justify-center rounded-full bg-[#C5FF4A] text-[10px] text-black">
             M
           </span>
-          {TREASURY.chainName}
+          Mantle Sepolia
           <ChevronDown className="ml-2 size-3 text-[#8E8E8E]" />
         </div>
 
@@ -20,17 +25,12 @@ export function CfoHeader({ title }: { title: string }) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            aria-label="New proposal"
-            className="p-2 text-[#8E8E8E] transition-colors hover:text-white"
-          >
-            <Plus className="size-5" />
-          </button>
-          <button
-            type="button"
             aria-label="Refresh"
-            className="p-2 text-[#8E8E8E] transition-colors hover:text-white"
+            onClick={refetch}
+            disabled={loading}
+            className="p-2 text-[#8E8E8E] transition-colors hover:text-white disabled:opacity-50"
           >
-            <RefreshCw className="size-5" />
+            <RefreshCw className={cn('size-5', loading && 'animate-spin')} />
           </button>
           <button
             type="button"
@@ -50,3 +50,5 @@ export function CfoHeader({ title }: { title: string }) {
     </header>
   );
 }
+
+
