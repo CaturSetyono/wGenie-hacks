@@ -18,6 +18,7 @@ export type CfoNavItem = {
 export const CFO_NAV: CfoNavItem[] = [
   { label: 'Dashboard', href: '/cfo', icon: LayoutDashboard },
   { label: 'Treasury', href: '/cfo/treasury', icon: Landmark },
+  { label: 'Vaults', href: '/cfo/vaults', icon: Landmark },
   { label: 'Strategy', href: '/cfo/strategy', icon: Target },
   { label: 'Activity', href: '/cfo/activity', icon: Activity },
   { label: 'Agent', href: '/cfo/agent', icon: Bot, title: 'AI Agent' },
