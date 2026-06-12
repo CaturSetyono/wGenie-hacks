@@ -1,10 +1,21 @@
-import { ArrowUpRight, TrendingUp } from 'lucide-react';
-import { OVERVIEW } from './mock-data';
+'use client';
 
-/** Lime hero card — total treasury value, 24h P&L, blended APY. */
+import { ArrowUpRight, TrendingUp, Loader2 } from 'lucide-react';
+import { useTreasury } from './treasury-provider';
+
 export function OverviewCard() {
+  const { totalValueUsd, loading } = useTreasury();
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#C5FF4A_0%,#A3E635_100%)] p-6 text-black">
+        <Loader2 className="size-6 animate-spin opacity-70" />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col justify-between bg-[linear-gradient(135deg,#C5FF4A_0%,#A3E635_100%)] p-6 text-black">
+    <div className="flex h-full flex-col justify-between bg-[linear-gradient(135deg,#C5FF4A_0%,#A3E635_100%)] p-6 text-black">
       <div className="flex items-start justify-between">
         <span className="text-sm font-semibold opacity-70">
           Total Treasury Value
@@ -16,13 +27,13 @@ export function OverviewCard() {
 
       <div className="mt-8">
         <p className="text-4xl font-bold tracking-tight tabular-nums">
-          {OVERVIEW.totalValueLabel}
+          ${totalValueUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
         <div className="mt-2 flex items-center gap-2 text-sm font-semibold">
           <TrendingUp className="size-4" />
-          <span className="tabular-nums">+{OVERVIEW.change24hPct}%</span>
+          <span className="tabular-nums">Live</span>
           <span className="opacity-60 tabular-nums">
-            {OVERVIEW.change24hUsd} · 24h
+            Mantle Sepolia
           </span>
         </div>
       </div>
@@ -30,10 +41,10 @@ export function OverviewCard() {
       <div className="mt-8 flex items-end justify-between border-t border-black/10 pt-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider opacity-60">
-            Blended APY
+            Status
           </p>
           <p className="text-2xl font-bold tabular-nums">
-            {OVERVIEW.blendedApyPct}%
+            Online
           </p>
         </div>
         <button
