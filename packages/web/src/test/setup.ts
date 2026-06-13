@@ -1,6 +1,8 @@
 // Test setup file for vitest
 // This file can be used for global test configuration, mocks, etc.
 
+process.env.TZ = 'Europe/Paris';
+
 import { beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 
