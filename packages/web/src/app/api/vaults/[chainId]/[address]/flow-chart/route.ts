@@ -12,6 +12,8 @@ import {
   PERIODS,
 } from '@/lib/buckets';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ chainId: string; address: string }> },
